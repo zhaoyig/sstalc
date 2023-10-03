@@ -8,7 +8,7 @@ open Stdlib
 %token <Tal.name> TVAR
 %token JMP
 %token <string> LABEL
-%token TINT
+%token TINT (* Type Int *)
 %token HALT
 %token EAX
 %token EBX
@@ -30,6 +30,16 @@ open Stdlib
 %token BGTE
 %token BLTE
 
+%token MOV
+%token LD
+%token ST
+%token MALLOC
+%token UNPACK
+
+%token LTS (* less than sign *)
+%token GTS
+%token LSB (* left square bracket *)
+%token RSB 
 %token EOF
 
 %start <Tal.instruction_seq> prog
@@ -45,8 +55,12 @@ instruction_seq:
 
 instruction:
   | aop reg reg operand { Aop ($1, $2, $3, $4) }
+  | MOV reg operand { Mov ($2, $3) }
+  | LD reg reg INT { Ld ($2, $3, $4) }
+  | ST reg reg INT { St ($2, $3, $4) }
   | bop reg operand { Bop ($1, $2, $3) }
-
+  | MALLOC r = reg LTS l = list(operand) GTS { Malloc (r, l) } 
+  | UNPACK LSB a = TVAR r = reg RSB v = operand { Unpack ((TVar a), r, v)}
 aop:
   | ADD { Add }
   | SUB { Sub }
@@ -61,7 +75,7 @@ bop:
   | BLTE { Blte }
 
 ty:
-  | TVAR { Var $1 }
+  | TVAR { Var (TVar $1) }
   | TINT { Int }
 
 word_val:

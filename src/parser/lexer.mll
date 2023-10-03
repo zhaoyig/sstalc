@@ -35,6 +35,15 @@ rule read =
   | "BLT" { BLT }
   | "BGTE" { BGTE }
   | "BLTE" { BLTE }
+  | "MOV" { MOV }
+  | "ST" { ST }
+  | "LD" { LD }
+  | "MALLOC" { MALLOC }
+  | "UNPACK" { UNPACK }
+  | "<" { LTS }
+  | ">" { GTS }
+  | "[" { LSB }
+  | "]" { RSB }
   (* Types *)
   | "int" { TINT }
   (* Misc *)

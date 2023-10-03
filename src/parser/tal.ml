@@ -18,10 +18,13 @@ and ty_asgn = (label * ty) list
 and label_asgn = (label * ty) list
 
 and ty = 
-  | Var of name
+  | Var of type_var
   | Int
   | Forall of ty_asgn * reg_asgn
   | Exist of name * kind * ty
+
+and type_var =
+  | TVar of name
 
 (* Values *)
 
@@ -56,7 +59,7 @@ and instruction =
   | St of reg * reg * int
   | Bop of bop * reg * operand
   | Malloc of reg * (operand) list
-  | Unpack of name * reg * operand
+  | Unpack of type_var * reg * operand
 
 and aop = 
   | Add | Sub | Mul
