@@ -34,6 +34,9 @@ open Stdlib
 %token ST
 %token MALLOC
 %token UNPACK
+%token WORD_PACK
+%token OPERAND_PACK
+%token AS
 
 (* Types *)
 %token <Tal.name> TVAR (* Type variable *)
@@ -103,21 +106,22 @@ reg_asgn_item:
   | reg COLON ty { RegAsgnItem ($1, $3) }
 
 word_val:
-  | x = LABEL {Label x}
-  | x = INT {Immediate x}
+  | x = LABEL { Label x }
+  | x = INT { Immediate x }
+  | WORD_PACK LSB t = ty COMMA w = word_val RSB AS tprime = ty { WordPack (t, w, tprime)}
 
 reg:
-  | EAX {Eax}
-  | EBX {Ebx}
-  | ECX {Ecx}
-  | EDX {Edx}
-  | ESI {Esi}
-  | EDI {Edi}
-  | EDP {Ebp}
-  | ESP {Esp}
+  | EAX { Eax }
+  | EBX { Ebx }
+  | ECX { Ecx }
+  | EDX { Edx }
+  | ESI { Esi }
+  | EDI { Edi }
+  | EDP { Ebp }
+  | ESP { Esp }
 
 operand:
-  | x = reg {Reg x}
-  | x = word_val {Word x}
-
+  | x = reg { Reg x }
+  | x = word_val { Word x }
+  | OPERAND_PACK LSB t = ty COMMA o = operand RSB AS tprime = ty { OperandPack (t, o, tprime)}
 %%
