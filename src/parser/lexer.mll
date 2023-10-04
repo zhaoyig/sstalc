@@ -39,11 +39,18 @@ rule read =
   | "ST" { ST }
   | "LD" { LD }
   | "MALLOC" { MALLOC }
-  | "UNPACK" { UNPACK }
+  | "Unpack" { UNPACK }
+  | "Forall" { FORALL }
+  | "Exist" { EXIST }
   | "<" { LTS }
   | ">" { GTS }
   | "[" { LSB }
   | "]" { RSB }
+  | "{" { LCB }
+  | "}" { RCB }
+  | "." { DOT }
+  | "," { COMMA }
+  | ":" { COLON }
   (* Types *)
   | "int" { TINT }
   (* Misc *)

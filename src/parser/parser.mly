@@ -5,11 +5,7 @@ open Stdlib
 %token NEWLINE
 
 %token <int> INT
-%token <Tal.name> TVAR
-%token JMP
 %token <string> LABEL
-%token TINT (* Type Int *)
-%token HALT
 %token EAX
 %token EBX
 %token ECX
@@ -19,6 +15,9 @@ open Stdlib
 %token EDP
 %token ESP
 
+(* Instructions *)
+%token JMP
+%token HALT
 %token ADD
 %token SUB
 %token MUL
@@ -36,10 +35,22 @@ open Stdlib
 %token MALLOC
 %token UNPACK
 
+(* Types *)
+%token <Tal.name> TVAR (* Type variable *)
+%token TINT (* Type Int *)
+%token FORALL 
+%token EXIST
+
+(* Special Chars *)
 %token LTS (* less than sign *)
 %token GTS
 %token LSB (* left square bracket *)
 %token RSB 
+%token LCB (* left curly braces *)
+%token RCB
+%token DOT
+%token COMMA
+%token COLON
 %token EOF
 
 %start <Tal.instruction_seq> prog
@@ -61,6 +72,7 @@ instruction:
   | bop reg operand { Bop ($1, $2, $3) }
   | MALLOC r = reg LTS l = list(operand) GTS { Malloc (r, l) } 
   | UNPACK LSB a = TVAR r = reg RSB v = operand { Unpack ((TVar a), r, v)}
+
 aop:
   | ADD { Add }
   | SUB { Sub }
@@ -77,6 +89,18 @@ bop:
 ty:
   | TVAR { Var (TVar $1) }
   | TINT { Int }
+  | LTS l = list(ty) GTS { TypeList l }
+  | FORALL LSB a = ty_asgn RSB DOT r = reg_asgn { Forall (a, r) }
+  | EXIST TVAR DOT ty { Exist (TVar $2, $4) }
+
+ty_asgn:
+  | l = separated_list(COMMA, TVAR) { TyAsgn (List.map (fun x -> (TyAsgnItem (TVar x))) l) }
+
+reg_asgn:
+  | LCB separated_list(COMMA, reg_asgn_item) RCB { RegAsgn $2 }
+
+reg_asgn_item:
+  | reg COLON ty { RegAsgnItem ($1, $3) }
 
 word_val:
   | x = LABEL {Label x}
