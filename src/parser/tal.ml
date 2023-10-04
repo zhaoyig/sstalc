@@ -40,13 +40,13 @@ type heap_val =
 and word_val = 
   | Label of label
   | Immediate of int
-  | WordPack of ty * word_val
+  | WordPack of ty * word_val * ty
 (* Omitted polymorphic type instantiation *)
 
 and operand =
   | Reg of reg
   | Word of word_val
-  | OperandPack of ty * operand
+  | OperandPack of ty * operand * ty
 
 (* Omitted polymorphic type instantiation *)
 

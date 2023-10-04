@@ -42,6 +42,9 @@ rule read =
   | "Unpack" { UNPACK }
   | "Forall" { FORALL }
   | "Exist" { EXIST }
+  | "WordPack" { WORD_PACK }
+  | "OperandPack" { OPERAND_PACK}
+  | "as" { AS }
   | "<" { LTS }
   | ">" { GTS }
   | "[" { LSB }
