@@ -103,21 +103,21 @@ reg_asgn_item:
   | reg COLON ty { RegAsgnItem ($1, $3) }
 
 word_val:
-  | x = LABEL {Label x}
-  | x = INT {Immediate x}
-
+  | x = LABEL { Label x }
+  | x = INT { Immediate x }
+  
 reg:
-  | EAX {Eax}
-  | EBX {Ebx}
-  | ECX {Ecx}
-  | EDX {Edx}
-  | ESI {Esi}
-  | EDI {Edi}
-  | EDP {Ebp}
-  | ESP {Esp}
+  | EAX { Eax }
+  | EBX { Ebx }
+  | ECX { Ecx }
+  | EDX { Edx }
+  | ESI { Esi }
+  | EDI { Edi }
+  | EDP { Ebp }
+  | ESP { Esp }
 
 operand:
-  | x = reg {Reg x}
-  | x = word_val {Word x}
+  | x = reg { Reg x }
+  | x = word_val { Word x }
 
 %%
