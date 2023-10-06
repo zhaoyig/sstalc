@@ -57,7 +57,7 @@ rule read =
   (* Types *)
   | "int" { TINT }
   (* Misc *)
-  | ";;" { NEWLINE }
+  | "\n" { NEWLINE }
   (* id, int, eof *)
   | label { LABEL (Lexing.lexeme lexbuf) }
   | id { TVAR (Lexing.lexeme lexbuf) }

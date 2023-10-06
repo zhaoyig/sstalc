@@ -1,1 +1,2 @@
+ADD EAX EBX ECX
 HALT int
