@@ -12,7 +12,7 @@ let parse (s : string) : instruction_seq =
   let instruction_seq = Parser.prog Lexer.read lexbuf in
   instruction_seq
 
-let parse_file fn =
+let parseFile fn =
   try
     let fh = open_in fn in
     let lex = Lexing.from_channel fh in (* Create a lexbuf *)
