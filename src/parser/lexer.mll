@@ -11,6 +11,9 @@ let id = letter+
 (* Labels start with letter l, to distinguish from type variables *)
 let label = 'l' digit+
 
+(* Stack type variables start with underscore *)
+let stack_type_var = '_' letter+
+
 rule read =
   parse
   | white { read lexbuf }
@@ -45,6 +48,12 @@ rule read =
   | "WordPack" { WORD_PACK }
   | "OperandPack" { OPERAND_PACK}
   | "as" { AS }
+  | "nil" { NIL }
+  | "::" { CONS }
+  | "@" { APPEND }
+  | "PTR" { TPTR }
+  | "cdot" { TY_ASGN_NIL }
+  | "sp" { SP }
   | "<" { LTS }
   | ">" { GTS }
   | "[" { LSB }
@@ -54,6 +63,8 @@ rule read =
   | "." { DOT }
   | "," { COMMA }
   | ":" { COLON }
+  | "(" { LPAREN }
+  | ")" { RPAREN }
   (* Types *)
   | "int" { TINT }
   (* Misc *)
@@ -61,6 +72,7 @@ rule read =
   (* id, int, eof *)
   | label { LABEL (Lexing.lexeme lexbuf) }
   | id { TVAR (Lexing.lexeme lexbuf) }
+  | stack_type_var { STVAR (Lexing.lexeme lexbuf) }
   | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
   | eof { EOF }
   | _ as c { failwith (Printf.sprintf "unexpected character: %C" c) }

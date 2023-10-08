@@ -11,13 +11,14 @@ type kind =
   | Ktype   		  (* describes types of all values *)
   | Kstack  		  (* describes types of the stack & pointers into it *)
 
-type reg_asgn = RegAsgn of (reg_asgn_item) list
+type reg_asgn = RegAsgn of stack_ty * ((reg_asgn_item) list)
 
 and reg_asgn_item = RegAsgnItem of reg * ty
 
-and ty_asgn = TyAsgn of ty_asgn_item list
-
-and ty_asgn_item = TyAsgnItem of type_var
+and ty_asgn =
+  | TyAsgnNil
+  | TyAsgnCons1 of type_var * ty_asgn
+  | TyAsgnCons2 of stack_type_var * ty_asgn
 
 and label_asgn = (label * ty) list
 
@@ -27,9 +28,19 @@ and ty =
   | TypeList of (ty) list
   | Forall of ty_asgn * reg_asgn
   | Exist of type_var * ty
-
+  | TPtr of stack_ty
+  
 and type_var =
   | TVar of name
+
+and stack_ty = 
+  | StackTypeVar of stack_type_var
+  | Nil
+  | Cons of ty * stack_ty
+  | Append of stack_ty * stack_ty
+
+and stack_type_var =
+  | STVar of name
 
 (* Values *)
 
@@ -71,3 +82,4 @@ and aop =
 
 and bop = 
   | Beq | Bneq | Bgt | Blt | Bgte | Blte
+

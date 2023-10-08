@@ -40,9 +40,16 @@ open Stdlib
 
 (* Types *)
 %token <Tal.name> TVAR (* Type variable *)
+%token <Tal.name> STVAR (* Stack type variable *)
 %token TINT (* Type Int *)
 %token FORALL 
 %token EXIST
+%token NIL
+%token CONS
+%token APPEND
+%token TPTR (* Pointer type *)
+%token SP
+%token TY_ASGN_NIL
 
 (* Special Chars *)
 %token LTS (* less than sign *)
@@ -54,8 +61,12 @@ open Stdlib
 %token DOT
 %token COMMA
 %token COLON
+%token LPAREN
+%token RPAREN
 %token EOF
 
+%left APPEND
+%left CONS (* Should it be left assoc? *)
 %start <Tal.instruction_seq> prog
 %%
 
@@ -95,12 +106,22 @@ ty:
   | LTS l = list(ty) GTS { TypeList l }
   | FORALL LSB a = ty_asgn RSB DOT r = reg_asgn { Forall (a, r) }
   | EXIST TVAR DOT ty { Exist (TVar $2, $4) }
+  | TPTR LPAREN stack_ty RPAREN { TPtr $3 }
+
+stack_ty:
+  | STVAR { StackTypeVar (STVar $1) }
+  | NIL { Nil }
+  | ty CONS stack_ty { Cons ($1, $3) }
+  | stack_ty APPEND stack_ty { Append ($1, $3) }
 
 ty_asgn:
-  | l = separated_list(COMMA, TVAR) { TyAsgn (List.map (fun x -> (TyAsgnItem (TVar x))) l) }
+  | TY_ASGN_NIL { TyAsgnNil }
+  | STVAR COMMA ty_asgn { TyAsgnCons1 ((TVar $1), $3) }
+  | TVAR COMMA ty_asgn { TyAsgnCons2 ((STVar $1), $3) }
 
 reg_asgn:
-  | LCB separated_list(COMMA, reg_asgn_item) RCB { RegAsgn $2 }
+  | LCB SP COLON st = stack_ty COMMA l = separated_list(COMMA, reg_asgn_item) RCB { RegAsgn (st, l) }
+  | LCB SP COLON st = stack_ty RCB { RegAsgn (st, []) }
 
 reg_asgn_item:
   | reg COLON ty { RegAsgnItem ($1, $3) }

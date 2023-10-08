@@ -1,2 +1,1 @@
-ADD EAX EBX ECX
-HALT int
+HALT Forall[_a, b, _c, d, cdot].{sp: int::nil, EAX: int}
