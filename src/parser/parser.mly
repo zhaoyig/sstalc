@@ -14,6 +14,14 @@ open Stdlib
 %token EDI
 %token EDP
 %token ESP
+%token RAX
+%token RBX
+%token RCX
+%token RDX
+%token RSI
+%token RDI
+%token RBP
+%token RSP
 
 (* Instructions *)
 %token JMP
@@ -140,6 +148,14 @@ reg:
   | EDI { Edi }
   | EDP { Ebp }
   | ESP { Esp }
+  | RAX { Rax }
+  | RBX { Rbx }
+  | RCX { Rcx }
+  | RDX { Rdx }
+  | RSI { Rsi }
+  | RDI { Rdi }
+  | RBP { Rbp }
+  | RSP { Rsp }
 
 operand:
   | x = reg { Reg x }

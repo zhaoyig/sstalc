@@ -1,6 +1,6 @@
 type name = string
 
-type reg = Eax | Ebx | Ecx | Edx | Esi | Edi | Ebp | Esp
+type reg = Eax | Ebx | Ecx | Edx | Esi | Edi | Ebp | Esp | Rax | Rbx | Rcx | Rdx | Rsi | Rdi | Rbp | Rsp
 
 type label = string
 

@@ -26,6 +26,14 @@ rule read =
   | "edi" { EDI }
   | "edp" { EDP }
   | "esp" { ESP }
+  | "rax" { RAX }
+  | "rbx" { RBX }
+  | "rcx" { RCX }
+  | "rdx" { RDX }
+  | "rsi" { RSI }
+  | "rdi" { RDI }
+  | "rbp" { RBP }
+  | "rsp" { RSP }
   (* Instructions *)
   | "jmp" { JMP }
   | "halt" { HALT }

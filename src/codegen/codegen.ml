@@ -10,7 +10,15 @@ let compileReg = function
   | Edi -> "edi"
   | Ebp -> "ebp"
   | Esp -> "esp"
-
+  | Rax -> "rax"
+  | Rbx -> "rbx"
+  | Rcx -> "rcx"
+  | Rdx -> "rdx"
+  | Rsi -> "rsi"
+  | Rdi -> "rdi"
+  | Rbp -> "rbp"
+  | Rsp -> "rsp"
+  
 let formatInstruction instruction operands =
   instruction ^ " " ^ String.concat ", " operands
   
