@@ -18,30 +18,30 @@ rule read =
   parse
   | white { read lexbuf }
   (* Registers *)
-  | "EAX" { EAX }
-  | "EBX" { EBX }
-  | "ECX" { ECX }
-  | "EDX" { EDX }
-  | "ESI" { ESI }
-  | "EDI" { EDI }
-  | "EDP" { EDP }
-  | "ESP" { ESP }
+  | "eax" { EAX }
+  | "ebx" { EBX }
+  | "ecx" { ECX }
+  | "edx" { EDX }
+  | "esi" { ESI }
+  | "edi" { EDI }
+  | "edp" { EDP }
+  | "esp" { ESP }
   (* Instructions *)
-  | "JMP" { JMP }
-  | "HALT" { HALT }
-  | "ADD" { ADD }
-  | "SUB" { SUB }
-  | "MUL" { MUL }
-  | "BEQ" { BEQ }
-  | "BNEQ" { BNEQ }
-  | "BGT" { BGT }
-  | "BLT" { BLT }
-  | "BGTE" { BGTE }
-  | "BLTE" { BLTE }
-  | "MOV" { MOV }
-  | "ST" { ST }
-  | "LD" { LD }
-  | "MALLOC" { MALLOC }
+  | "jmp" { JMP }
+  | "halt" { HALT }
+  | "add" { ADD }
+  | "sub" { SUB }
+  | "mul" { MUL }
+  | "beq" { BEQ }
+  | "bneq" { BNEQ }
+  | "bgt" { BGT }
+  | "blt" { BLT }
+  | "bgte" { BGTE }
+  | "blte" { BLTE }
+  | "mov" { MOV }
+  | "st" { ST }
+  | "ld" { LD }
+  | "malloc" { MALLOC }
   | "Unpack" { UNPACK }
   | "Forall" { FORALL }
   | "Exist" { EXIST }
