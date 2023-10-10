@@ -42,7 +42,7 @@ rule read =
   | "st" { ST }
   | "ld" { LD }
   | "malloc" { MALLOC }
-  | "Unpack" { UNPACK }
+  | "unpack" { UNPACK }
   | "Forall" { FORALL }
   | "Exist" { EXIST }
   | "WordPack" { WORD_PACK }
