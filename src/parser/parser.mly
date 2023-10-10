@@ -87,13 +87,13 @@ instruction_seq:
   | instruction NEWLINE instruction_seq { InstructionSeq ($1, $3)}
 
 instruction:
-  | aop reg reg operand { Aop ($1, $2, $3, $4) }
-  | MOV reg operand { Mov ($2, $3) }
-  | LD reg reg INT { Ld ($2, $3, $4) }
-  | ST reg reg INT { St ($2, $3, $4) }
-  | bop reg operand { Bop ($1, $2, $3) }
-  | MALLOC r = reg LTS l = list(operand) GTS { Malloc (r, l) } 
-  | UNPACK LSB a = TVAR r = reg RSB v = operand { Unpack ((TVar a), r, v)}
+  | aop rd = reg COMMA rs = reg COMMA v = operand { Aop ($1, rd, rs, v) }
+  | MOV rd = reg COMMA v = operand { Mov (rd, v) }
+  | LD rd = reg COMMA rs = reg LPAREN i = INT RPAREN { Ld (rd, rs, i) }
+  | ST rd = reg LPAREN i = INT RPAREN rs = reg { St (rd, rs, i) }
+  | bop reg COMMA operand { Bop ($1, $2, $4) }
+  | MALLOC r = reg COMMA LTS l = list(operand) GTS { Malloc (r, l) } 
+  | UNPACK LSB a = TVAR r = reg RSB COMMA v = operand { Unpack ((TVar a), r, v)}
 
 aop:
   | ADD { Add }
