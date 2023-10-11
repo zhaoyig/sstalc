@@ -18,7 +18,7 @@ let compileReg = function
   | Rdi -> "rdi"
   | Rbp -> "rbp"
   | Rsp -> "rsp"
-  
+
 let formatInstruction instruction operands =
   instruction ^ " " ^ String.concat ", " operands
   
@@ -84,7 +84,10 @@ let compileInstruction = function
 
 let rec compileInstructionSeq = function
   | Jmp op -> [compileOperand op]
-  | Halt _ -> ["hlt"] (* Need to replace with syscall? *)
+  | Halt _ -> [
+      "mov rax, 0x02000001";
+      "syscall"
+    ] (* MacOS exit syscall *)
   | InstructionSeq (instruction, instructionSeq) -> 
       compileInstruction instruction @ compileInstructionSeq instructionSeq
 
