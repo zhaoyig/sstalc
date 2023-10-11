@@ -46,6 +46,7 @@ open Stdlib
 %token WORD_PACK
 %token OPERAND_PACK
 %token AS
+%token CODE
 
 (* Types *)
 %token <Tal.name> TVAR (* Type variable *)
@@ -76,20 +77,26 @@ open Stdlib
 
 %left APPEND
 %left CONS (* Should it be left assoc? *)
-%start <Tal.instruction_seq_seq> prog
+%start <Tal.code_block_seq> prog
 %%
 
 prog:
-  | e = instruction_seq_seq; EOF { e }
+  | e = code_block_seq; EOF { e }
 
-instruction_seq_seq:
-  | instruction_seq { InstructionSeqSeq $1 }
-  | instruction_seq; instruction_seq_seq { InstructionSeqSeqCons ($1, $2) }
+code_block_seq:
+  | code_block { CodeBlockSeq $1 }
+  | code_block; code_block_seq { CodeBlockSeqCons ($1, $2) }
 
 instruction_seq:
   | JMP; x = operand { Jmp x }
   | HALT; x = ty { Halt x }
   | instruction_line; instruction_seq { InstructionSeq ($1, $2)}
+
+code_block:
+  | LABEL COLON code { CodeBlock ($1, $3) }
+
+code:
+  | CODE LSB t = ty_asgn RSB r = reg_asgn DOT is = instruction_seq { Code (t, r, is) }
 
 instruction_line:
   | option(LABEL) option(COLON) instruction option(COMMENT) { InstructionLine ($1, $3, $4) }

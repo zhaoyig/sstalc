@@ -60,6 +60,7 @@ rule read =
   | "WordPack" { WORD_PACK }
   | "OperandPack" { OPERAND_PACK}
   | "as" { AS }
+  | "code" { CODE }
   | "nil" { NIL }
   | "::" { CONS }
   | "@" { APPEND }

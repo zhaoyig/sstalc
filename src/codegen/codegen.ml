@@ -96,15 +96,23 @@ let rec compileInstructionSeq = function
   | InstructionSeq (instruction_line, instructionSeq) -> 
       compileInstructionLine instruction_line @ compileInstructionSeq instructionSeq
 
-let rec compileInstructionSeqSeq = function
-  | InstructionSeqSeq ins_seq -> compileInstructionSeq ins_seq
-  | InstructionSeqSeqCons (ins_seq, ins_seq_seq) -> 
-      compileInstructionSeq ins_seq @ compileInstructionSeqSeq ins_seq_seq
+let compileCode = function
+  | Code (_, _, ins_seq) ->
+    compileInstructionSeq ins_seq
+
+let compileCodeBlock = function
+  | CodeBlock (label, code) -> 
+    [label ^ ":"] @ compileCode code
+
+let rec compileCodeBlockSeq = function
+  | CodeBlockSeq code_block -> compileCodeBlock code_block
+  | CodeBlockSeqCons (code_block, code_block_seq) -> 
+      compileCodeBlock code_block @ compileCodeBlockSeq code_block_seq
 
 let compileFile filename = 
   let ins_seq_seq = parseFile filename in
   let compiledInstructions = String.concat "\n"
-    (compileInstructionSeqSeq ins_seq_seq) in
+    (compileCodeBlockSeq ins_seq_seq) in
   let header = "global  _main\nsection  .text\n" in
   let compiledResult = header ^ compiledInstructions in
   let oc = open_out (filename ^ ".asm") in

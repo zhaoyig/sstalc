@@ -46,7 +46,13 @@ and stack_type_var =
 
 type heap_val =
   | Words of (word_val) list
-  | Code of ty_asgn * reg_asgn * instruction
+  | HCode of code
+
+and code = 
+  | Code of ty_asgn * reg_asgn * instruction_seq
+
+and code_block =
+  | CodeBlock of label * code
 
 and word_val = 
   | Label of label
@@ -63,9 +69,9 @@ and operand =
 
 (* Instructions *)
 
-and instruction_seq_seq = 
-  | InstructionSeqSeq of instruction_seq
-  | InstructionSeqSeqCons of instruction_seq * instruction_seq_seq
+and code_block_seq = 
+  | CodeBlockSeq of code_block
+  | CodeBlockSeqCons of code_block * code_block_seq
 
 and instruction_seq = 
   | Jmp of operand
