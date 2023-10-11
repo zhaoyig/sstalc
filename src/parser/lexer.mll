@@ -8,15 +8,19 @@ let int = '-'? digit+
 let letter = ['a'-'z' 'A'-'Z']
 let id = letter+
 
-(* Labels start with letter l, to distinguish from type variables *)
-let label = 'l' digit+
+(* Labels start with _ *)
+let label = '_' ['a'-'z' 'A'-'Z' '0'-'9']+
 
-(* Stack type variables start with underscore *)
-let stack_type_var = '_' letter+
+(* Stack type variables start with $ *)
+let stack_type_var = '$' letter+
+
+(* Comment start with ; *)
+let comment = ';' [^'\n']+
 
 rule read =
   parse
   | white { read lexbuf }
+  | '\n' { Lexing.new_line lexbuf; read lexbuf }
   (* Registers *)
   | "eax" { EAX }
   | "ebx" { EBX }
@@ -76,11 +80,12 @@ rule read =
   (* Types *)
   | "int" { TINT }
   (* Misc *)
-  | "\n" { NEWLINE }
+  (* | "\n" { NEWLINE } *)
   (* id, int, eof *)
   | label { LABEL (Lexing.lexeme lexbuf) }
   | id { TVAR (Lexing.lexeme lexbuf) }
   | stack_type_var { STVAR (Lexing.lexeme lexbuf) }
+  | comment { COMMENT (Lexing.lexeme lexbuf) }
   | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
   | eof { EOF }
   | _ as c { failwith (Printf.sprintf "unexpected character: %C" c) }

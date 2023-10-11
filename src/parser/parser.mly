@@ -2,10 +2,11 @@
 open Tal
 open Stdlib
 %}
-%token NEWLINE
+// %token NEWLINE
 
 %token <int> INT
 %token <string> LABEL
+%token <string> COMMENT
 %token EAX
 %token EBX
 %token ECX
@@ -75,16 +76,23 @@ open Stdlib
 
 %left APPEND
 %left CONS (* Should it be left assoc? *)
-%start <Tal.instruction_seq> prog
+%start <Tal.instruction_seq_seq> prog
 %%
 
 prog:
-  | e = instruction_seq; EOF { e }
+  | e = instruction_seq_seq; EOF { e }
+
+instruction_seq_seq:
+  | instruction_seq { InstructionSeqSeq $1 }
+  | instruction_seq; instruction_seq_seq { InstructionSeqSeqCons ($1, $2) }
 
 instruction_seq:
   | JMP; x = operand { Jmp x }
   | HALT; x = ty { Halt x }
-  | instruction NEWLINE instruction_seq { InstructionSeq ($1, $3)}
+  | instruction_line; instruction_seq { InstructionSeq ($1, $2)}
+
+instruction_line:
+  | option(LABEL) option(COLON) instruction option(COMMENT) { InstructionLine ($1, $3, $4) }
 
 instruction:
   | aop rd = reg COMMA rs = reg COMMA v = operand { Aop ($1, rd, rs, v) }

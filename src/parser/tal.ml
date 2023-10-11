@@ -63,10 +63,17 @@ and operand =
 
 (* Instructions *)
 
+and instruction_seq_seq = 
+  | InstructionSeqSeq of instruction_seq
+  | InstructionSeqSeqCons of instruction_seq * instruction_seq_seq
+
 and instruction_seq = 
   | Jmp of operand
   | Halt of ty
-  | InstructionSeq of instruction * instruction_seq
+  | InstructionSeq of instruction_line * instruction_seq
+
+and instruction_line =
+  | InstructionLine of label option * instruction * string option
 
 and instruction = 
   | Aop of aop * reg * reg * operand

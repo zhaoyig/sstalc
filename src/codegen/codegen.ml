@@ -82,19 +82,29 @@ let compileInstruction = function
       formatInstruction "mov" [compileReg reg; compileOperand operand];
     ]
 
+let compileInstructionLine = function
+  | InstructionLine (label, instruction, _) ->
+    if Option.is_some label then (Option.get(label) ^ ":") :: compileInstruction instruction
+    else compileInstruction instruction
+
 let rec compileInstructionSeq = function
-  | Jmp op -> [compileOperand op]
+  | Jmp op -> ["jmp " ^ compileOperand op]
   | Halt _ -> [
       "mov rax, 0x02000001";
       "syscall"
     ] (* MacOS exit syscall *)
-  | InstructionSeq (instruction, instructionSeq) -> 
-      compileInstruction instruction @ compileInstructionSeq instructionSeq
+  | InstructionSeq (instruction_line, instructionSeq) -> 
+      compileInstructionLine instruction_line @ compileInstructionSeq instructionSeq
+
+let rec compileInstructionSeqSeq = function
+  | InstructionSeqSeq ins_seq -> compileInstructionSeq ins_seq
+  | InstructionSeqSeqCons (ins_seq, ins_seq_seq) -> 
+      compileInstructionSeq ins_seq @ compileInstructionSeqSeq ins_seq_seq
 
 let compileFile filename = 
-  let instruction_seq = parseFile filename in
+  let ins_seq_seq = parseFile filename in
   let compiledInstructions = String.concat "\n"
-    (compileInstructionSeq instruction_seq) in
+    (compileInstructionSeqSeq ins_seq_seq) in
   let header = "global  _main\nsection  .text\n" in
   let compiledResult = header ^ compiledInstructions in
   let oc = open_out (filename ^ ".asm") in

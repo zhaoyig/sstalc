@@ -7,10 +7,10 @@ type location =
 exception Error of (location * string * string)
 
 
-let parse (s : string) : instruction_seq =
+let parse (s : string) : instruction_seq_seq =
   let lexbuf = Lexing.from_string s in
-  let instruction_seq = Parser.prog Lexer.read lexbuf in
-  instruction_seq
+  let instruction_seq_seq = Parser.prog Lexer.read lexbuf in
+  instruction_seq_seq
 
 let parseFile fn =
   try
