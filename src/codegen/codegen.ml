@@ -93,9 +93,11 @@ let rec compileInstructionSeq = function
 
 let compileFile filename = 
   let instruction_seq = parseFile filename in
-  let compileResult = String.concat "\n"
+  let compiledInstructions = String.concat "\n"
     (compileInstructionSeq instruction_seq) in
+  let header = "global  _main\nsection  .text\n" in
+  let compiledResult = header ^ compiledInstructions in
   let oc = open_out (filename ^ ".asm") in
-  Printf.fprintf oc "%s\n" compileResult;
+  Printf.fprintf oc "%s\n" compiledResult;
   close_out oc
   
