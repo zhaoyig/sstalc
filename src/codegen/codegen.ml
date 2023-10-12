@@ -117,7 +117,7 @@ let compileFile filename =
     "global  _main";
     "section  .text";
     "extern _malloc"
-  ] in
+  ]  ^ "\n" in
   let compiledResult = header ^ compiledInstructions in
   let oc = open_out (filename ^ ".asm") in
   Printf.fprintf oc "%s\n" compiledResult;
