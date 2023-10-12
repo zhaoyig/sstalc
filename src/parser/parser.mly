@@ -126,7 +126,7 @@ bop:
 ty:
   | TVAR { Var (TVar $1) }
   | TINT { Int }
-  | LTS l = list(ty) GTS { TypeList l }
+  | LTS l = separated_list(COMMA, ty) GTS { TypeList l }
   | FORALL LSB a = ty_asgn RSB DOT r = reg_asgn { Forall (a, r) }
   | EXIST TVAR DOT ty { Exist (TVar $2, $4) }
   | TPTR LPAREN stack_ty RPAREN { TPtr $3 }
