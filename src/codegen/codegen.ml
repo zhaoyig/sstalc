@@ -113,7 +113,11 @@ let compileFile filename =
   let ins_seq_seq = parseFile filename in
   let compiledInstructions = String.concat "\n"
     (compileCodeBlockSeq ins_seq_seq) in
-  let header = "global  _main\nsection  .text\n" in
+  let header = String.concat "\n" [
+    "global  _main";
+    "section  .text";
+    "extern _malloc"
+  ] in
   let compiledResult = header ^ compiledInstructions in
   let oc = open_out (filename ^ ".asm") in
   Printf.fprintf oc "%s\n" compiledResult;
