@@ -75,8 +75,13 @@ let compileInstruction = function
       formatInstruction "cmp" [compileReg reg; "0"];
       formatInstruction (compileBop bop) [compileOperand operand];
     ]
-  | Malloc (_, _) ->
-    [] (* TODO *)
+  | Malloc (reg, tyList) ->
+    let len = List.length tyList in 
+    let bytesToAlloc = len * 8 in [
+      formatInstruction "mov" ["rdi"; string_of_int bytesToAlloc];
+      formatInstruction "call" ["_malloc"];
+      formatInstruction "mov" [compileReg reg; "rax"]
+    ]
   | Unpack (_, reg, operand) ->
     [
       formatInstruction "mov" [compileReg reg; compileOperand operand];
