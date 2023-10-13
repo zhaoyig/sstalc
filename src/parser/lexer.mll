@@ -17,6 +17,9 @@ let stack_type_var = '$' letter+
 (* Comment start with ; *)
 let comment = ';' [^'\n']+
 
+(* Single line comment start with # *)
+let sl_comment = '#' [^'\n']+
+
 rule read =
   parse
   | white { read lexbuf }
@@ -87,6 +90,7 @@ rule read =
   | id { TVAR (Lexing.lexeme lexbuf) }
   | stack_type_var { STVAR (Lexing.lexeme lexbuf) }
   | comment { COMMENT (Lexing.lexeme lexbuf) }
+  | sl_comment { SINGLE_LINE_COMMENT (Lexing.lexeme lexbuf) }
   | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
   | eof { EOF }
   | _ as c { failwith (Printf.sprintf "unexpected character: %C" c) }

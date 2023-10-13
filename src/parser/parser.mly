@@ -74,6 +74,7 @@ open Stdlib
 %token LPAREN
 %token RPAREN
 %token EOF
+%token <string> SINGLE_LINE_COMMENT
 
 %left APPEND
 %left CONS (* Should it be left assoc? *)
@@ -100,7 +101,7 @@ code:
 
 instruction_line:
   | option(LABEL) option(COLON) instruction option(COMMENT) { InstructionLine ($1, $3, $4) }
-  | COMMENT { Comment $1 }
+  | SINGLE_LINE_COMMENT { Comment $1 }
 
 instruction:
   | aop rd = reg COMMA rs = reg COMMA v = operand { Aop ($1, rd, rs, v) }
