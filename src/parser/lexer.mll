@@ -8,10 +8,13 @@ let int = '-'? digit+
 let letter = ['a'-'z' 'A'-'Z']
 let id = letter+
 
+(* Constant value start with $ *)
+let immediate = '$' digit+
+
 (* Labels start with _ *)
 let label = '_' ['a'-'z' 'A'-'Z' '0'-'9']+
 
-(* Stack type variables start with $ *)
+(* Stack type variables start with ! *)
 let stack_type_var = '$' letter+
 
 (* Comment start with ; *)
@@ -92,6 +95,8 @@ rule read =
   | comment { COMMENT (Lexing.lexeme lexbuf) }
   | sl_comment { SINGLE_LINE_COMMENT (Lexing.lexeme lexbuf) }
   | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
+  | immediate { IMMEDIATE (let i = (Lexing.lexeme lexbuf) in 
+    int_of_string (String.sub i 1 (String.length i - 1))) }
   | eof { EOF }
   | _ as c { failwith (Printf.sprintf "unexpected character: %C" c) }
   

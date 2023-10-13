@@ -21,12 +21,20 @@ let compileReg = function
 
 let formatInstruction instruction operands =
   instruction ^ " " ^ String.concat ", " operands
-  
+
+let compileAdress = function
+| Address i -> string_of_int i
+
+let compileLabel = function
+  | LStr s -> s
+  | LAdr adr -> compileAdress adr
+
 let rec compileWordVal = function
-  | Label l -> l
+  | Label l -> compileLabel l
   | Immediate i -> string_of_int i
   | WordPack (_, wordVal, _) -> compileWordVal wordVal
-  
+  | Ptr adr -> compileAdress adr
+
 let rec compileOperand = function
   | Reg r -> compileReg r
   | Word w -> compileWordVal w
@@ -85,12 +93,17 @@ let compileInstruction = function
     [
       formatInstruction "mov" [compileReg reg; compileOperand operand];
     ]
+  | Salloc size -> [
+    formatInstruction "sub" ["rsp"; string_of_int (size * 8)];
+  ]
+  | Sfree size -> [
+    formatInstruction "add" ["rsp"; string_of_int (size * 8)]
+  ]
 
 let compileInstructionLine = function
-  | InstructionLine (label, instruction, comment) ->
+  | InstructionLine (instruction, comment) ->
     let commentLine = if Option.is_some comment then [ Option.get(comment) ] else [] in
-    if Option.is_some label then (Option.get(label) ^ ":") :: compileInstruction instruction @ commentLine
-    else compileInstruction instruction @ commentLine
+    compileInstruction instruction @ commentLine
   | Comment comment -> [ comment ]
 
 let rec compileInstructionSeq = function
@@ -108,7 +121,7 @@ let compileCode = function
 
 let compileCodeBlock = function
   | CodeBlock (label, code) -> 
-    [label ^ ":"] @ compileCode code
+    [(compileLabel label) ^ ":"] @ compileCode code
 
 let rec compileCodeBlockSeq = function
   | CodeBlockSeq code_block -> compileCodeBlock code_block

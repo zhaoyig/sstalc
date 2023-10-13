@@ -5,7 +5,9 @@ open Stdlib
 // %token NEWLINE
 
 %token <int> INT
+%token <int> IMMEDIATE
 %token <string> LABEL
+%token <int> ADDRESS
 %token <string> COMMENT
 %token EAX
 %token EBX
@@ -47,6 +49,8 @@ open Stdlib
 %token OPERAND_PACK
 %token AS
 %token CODE
+%token SALLOC
+%token SFREE
 
 (* Types *)
 %token <Tal.name> TVAR (* Type variable *)
@@ -94,13 +98,13 @@ instruction_seq:
   | instruction_line; instruction_seq { InstructionSeq ($1, $2)}
 
 code_block:
-  | LABEL COLON code { CodeBlock ($1, $3) }
+  | LABEL COLON code { CodeBlock (LStr($1), $3) }
 
 code:
   | CODE LSB t = ty_asgn RSB r = reg_asgn DOT is = instruction_seq { Code (t, r, is) }
 
 instruction_line:
-  | option(LABEL) option(COLON) instruction option(COMMENT) { InstructionLine ($1, $3, $4) }
+  | instruction option(COMMENT) { InstructionLine ($1, $2) }
   | SINGLE_LINE_COMMENT { Comment $1 }
 
 instruction:
@@ -111,7 +115,9 @@ instruction:
   | bop reg COMMA operand { Bop ($1, $2, $4) }
   | MALLOC LTS l = separated_list(COMMA, ty) GTS { Malloc l } 
   | UNPACK LSB a = TVAR r = reg RSB COMMA v = operand { Unpack ((TVar a), r, v)}
-
+  | SALLOC INT { Salloc $2 }
+  | SFREE INT { Sfree $2 }
+  
 aop:
   | ADD { Add }
   | SUB { Sub }
@@ -152,8 +158,9 @@ reg_asgn_item:
   | reg COLON ty { RegAsgnItem ($1, $3) }
 
 word_val:
-  | x = LABEL { Label x }
-  | x = INT { Immediate x }
+  | x = LABEL { Label (LStr x) }
+  | x = INT { Label (LAdr (Address x)) }
+  | x = IMMEDIATE { Immediate x }
   | WORD_PACK LSB t = ty COMMA w = word_val RSB AS tprime = ty { WordPack (t, w, tprime)}
 
 reg:

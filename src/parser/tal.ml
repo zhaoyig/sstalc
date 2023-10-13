@@ -2,7 +2,12 @@ type name = string
 
 type reg = Eax | Ebx | Ecx | Edx | Esi | Edi | Ebp | Esp | Rax | Rbx | Rcx | Rdx | Rsi | Rdi | Rbp | Rsp
 
-type label = string
+type label = 
+  | LStr of string
+  | LAdr of address
+
+and address = 
+  | Address of int
 
 (* Types *)
 
@@ -19,8 +24,6 @@ and ty_asgn =
   | TyAsgnNil
   | TyAsgnCons1 of type_var * ty_asgn
   | TyAsgnCons2 of stack_type_var * ty_asgn
-
-and label_asgn = (label * ty) list
 
 and ty = 
   | Var of type_var (* Type Variable *)
@@ -59,6 +62,7 @@ and word_val =
   | Immediate of int
   | WordPack of ty * word_val * ty
 (* Omitted polymorphic type instantiation *)
+  | Ptr of address
 
 and operand =
   | Reg of reg
@@ -79,7 +83,7 @@ and instruction_seq =
   | InstructionSeq of instruction_line * instruction_seq
 
 and instruction_line =
-  | InstructionLine of label option * instruction * string option
+  | InstructionLine of instruction * string option
   | Comment of string
 
 and instruction = 
@@ -90,6 +94,8 @@ and instruction =
   | Bop of bop * reg * operand
   | Malloc of (ty) list
   | Unpack of type_var * reg * operand
+  | Salloc of int
+  | Sfree of int
 
 and aop = 
   | Add | Sub | Mul
