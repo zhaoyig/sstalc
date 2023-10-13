@@ -108,7 +108,7 @@ instruction:
   | LD rd = reg COMMA rs = reg LPAREN i = INT RPAREN { Ld (rd, rs, i) }
   | ST rd = reg LPAREN i = INT RPAREN COMMA rs = reg { St (rd, rs, i) }
   | bop reg COMMA operand { Bop ($1, $2, $4) }
-  | MALLOC r = reg COMMA LTS l = separated_list(COMMA, ty) GTS { Malloc (r, l) } 
+  | MALLOC LTS l = separated_list(COMMA, ty) GTS { Malloc l } 
   | UNPACK LSB a = TVAR r = reg RSB COMMA v = operand { Unpack ((TVar a), r, v)}
 
 aop:

@@ -88,7 +88,7 @@ and instruction =
   | Ld of reg * reg * int
   | St of reg * reg * int
   | Bop of bop * reg * operand
-  | Malloc of reg * (ty) list
+  | Malloc of (ty) list
   | Unpack of type_var * reg * operand
 
 and aop = 
