@@ -100,6 +100,7 @@ code:
 
 instruction_line:
   | option(LABEL) option(COLON) instruction option(COMMENT) { InstructionLine ($1, $3, $4) }
+  | COMMENT { Comment $1 }
 
 instruction:
   | aop rd = reg COMMA rs = reg COMMA v = operand { Aop ($1, rd, rs, v) }

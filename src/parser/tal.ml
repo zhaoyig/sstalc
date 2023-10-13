@@ -80,6 +80,7 @@ and instruction_seq =
 
 and instruction_line =
   | InstructionLine of label option * instruction * string option
+  | Comment of string
 
 and instruction = 
   | Aop of aop * reg * reg * operand

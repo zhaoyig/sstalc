@@ -88,9 +88,11 @@ let compileInstruction = function
     ]
 
 let compileInstructionLine = function
-  | InstructionLine (label, instruction, _) ->
-    if Option.is_some label then (Option.get(label) ^ ":") :: compileInstruction instruction
-    else compileInstruction instruction
+  | InstructionLine (label, instruction, comment) ->
+    let commentLine = if Option.is_some comment then [ Option.get(comment) ] else [] in
+    if Option.is_some label then (Option.get(label) ^ ":") :: compileInstruction instruction @ commentLine
+    else compileInstruction instruction @ commentLine
+  | Comment comment -> [ comment ]
 
 let rec compileInstructionSeq = function
   | Jmp op -> ["jmp " ^ compileOperand op]
