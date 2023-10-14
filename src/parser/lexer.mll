@@ -9,7 +9,7 @@ let letter = ['a'-'z' 'A'-'Z']
 let id = letter+
 
 (* Constant value start with $ *)
-let immediate = '$' digit+
+let immediate = '$' '-'? digit+
 
 (* Labels start with _ *)
 let label = '_' ['a'-'z' 'A'-'Z' '0'-'9']+
