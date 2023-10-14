@@ -65,6 +65,10 @@ rule read =
   | "Exist" { EXIST }
   | "WordPack" { WORD_PACK }
   | "OperandPack" { OPERAND_PACK}
+  | "sfree" { SFREE }
+  | "salloc" { SALLOC }
+  | "sst" { SST }
+  | "sld" { SLD }
   | "as" { AS }
   | "code" { CODE }
   | "nil" { NIL }
