@@ -2,6 +2,8 @@ type name = string
 
 type reg = Eax | Ebx | Ecx | Edx | Esi | Edi | Ebp | Esp | Rax | Rbx | Rcx | Rdx | Rsi | Rdi | Rbp | Rsp
 
+type sp = Sp
+
 type label = 
   | LStr of string
   | LAdr of address
@@ -96,6 +98,12 @@ and instruction =
   | Unpack of type_var * reg * operand
   | Salloc of int
   | Sfree of int
+  | Movsp1 of sp * reg (* Mov into sp *)
+  | Movsp2 of reg * sp (* Mov out of sp *)
+  | Sst of reg * reg * int
+  | Sld of reg * reg * int
+  | Sstsp of sp * reg * int
+  | Sldsp of reg * sp * int
 
 and aop = 
   | Add | Sub | Mul

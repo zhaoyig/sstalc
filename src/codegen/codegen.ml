@@ -56,7 +56,7 @@ let compileBop = function
   | Bgte -> "jge"
   | Blte -> "jle"
 
-let compileInstruction = function
+let rec compileInstruction = function
   | Aop (aop, reg1, reg2, operand) -> 
     let reg1Exp = compileReg reg1 in
     let reg2Exp = compileReg reg2 in
@@ -99,6 +99,21 @@ let compileInstruction = function
   | Sfree size -> [
     formatInstruction "add" ["rsp"; string_of_int (size * 8)]
   ]
+  | Movsp1 (_, reg) -> [
+    formatInstruction "mov" ["rsp"; compileReg reg]
+  ]
+  | Movsp2 (reg, _) -> [
+    formatInstruction "mov" [compileReg reg; "rsp"]
+  ]
+  | Sst (reg1, reg2, offset) -> compileInstruction (St (reg1, reg2, offset))
+  | Sld (reg1, reg2, offset) -> compileInstruction (Ld (reg1, reg2, offset))
+  | Sstsp (_, r, offset) -> [
+    formatInstruction "mov" ["[" ^ "rsp" ^ compileOffset offset ^ "]"; compileReg r]
+  ]
+  | Sldsp (r, _, offset) -> [
+    formatInstruction "mov" [compileReg r; "[" ^ "rsp" ^ compileOffset offset ^ "]"; ]
+  ]
+
 
 let compileInstructionLine = function
   | InstructionLine (instruction, comment) ->

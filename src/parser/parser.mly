@@ -51,6 +51,8 @@ open Stdlib
 %token CODE
 %token SALLOC
 %token SFREE
+%token SST
+%token SLD
 
 (* Types *)
 %token <Tal.name> TVAR (* Type variable *)
@@ -117,7 +119,12 @@ instruction:
   | UNPACK LSB a = TVAR r = reg RSB COMMA v = operand { Unpack ((TVar a), r, v)}
   | SALLOC INT { Salloc $2 }
   | SFREE INT { Sfree $2 }
-  
+  | MOV SP COMMA r = reg { Movsp1 (Sp, r) }
+  | MOV r = reg COMMA SP { Movsp2 (r, Sp) }
+  | SST rd = reg LPAREN i = INT RPAREN COMMA rs = reg { Sst (rd, rs, i) }
+  | SLD rd = reg COMMA rs = reg LPAREN i = INT RPAREN { Sld (rd, rs, i) }
+  | SST SP LPAREN i = INT RPAREN COMMA rs = reg { Sstsp (Sp, rs, i) }
+  | SLD rd = reg COMMA SP LPAREN i = INT RPAREN { Sldsp (rd, Sp, i) }
 aop:
   | ADD { Add }
   | SUB { Sub }
