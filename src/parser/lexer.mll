@@ -8,46 +8,69 @@ let int = '-'? digit+
 let letter = ['a'-'z' 'A'-'Z']
 let id = letter+
 
-(* Labels start with letter l, to distinguish from type variables *)
-let label = 'l' digit+
+(* Constant value start with $ *)
+let immediate = '$' '-'? digit+
 
-(* Stack type variables start with underscore *)
-let stack_type_var = '_' letter+
+(* Labels start with _ *)
+let label = '_' ['a'-'z' 'A'-'Z' '0'-'9']+
+
+(* Stack type variables start with ! *)
+let stack_type_var = '$' letter+
+
+(* Comment start with ; *)
+let comment = ';' [^'\n']+
+
+(* Single line comment start with # *)
+let sl_comment = '#' [^'\n']+
 
 rule read =
   parse
   | white { read lexbuf }
+  | '\n' { Lexing.new_line lexbuf; read lexbuf }
   (* Registers *)
-  | "EAX" { EAX }
-  | "EBX" { EBX }
-  | "ECX" { ECX }
-  | "EDX" { EDX }
-  | "ESI" { ESI }
-  | "EDI" { EDI }
-  | "EDP" { EDP }
-  | "ESP" { ESP }
+  | "eax" { EAX }
+  | "ebx" { EBX }
+  | "ecx" { ECX }
+  | "edx" { EDX }
+  | "esi" { ESI }
+  | "edi" { EDI }
+  | "edp" { EDP }
+  | "esp" { ESP }
+  | "rax" { RAX }
+  | "rbx" { RBX }
+  | "rcx" { RCX }
+  | "rdx" { RDX }
+  | "rsi" { RSI }
+  | "rdi" { RDI }
+  | "rbp" { RBP }
+  | "rsp" { RSP }
   (* Instructions *)
-  | "JMP" { JMP }
-  | "HALT" { HALT }
-  | "ADD" { ADD }
-  | "SUB" { SUB }
-  | "MUL" { MUL }
-  | "BEQ" { BEQ }
-  | "BNEQ" { BNEQ }
-  | "BGT" { BGT }
-  | "BLT" { BLT }
-  | "BGTE" { BGTE }
-  | "BLTE" { BLTE }
-  | "MOV" { MOV }
-  | "ST" { ST }
-  | "LD" { LD }
-  | "MALLOC" { MALLOC }
-  | "Unpack" { UNPACK }
+  | "jmp" { JMP }
+  | "halt" { HALT }
+  | "add" { ADD }
+  | "sub" { SUB }
+  | "mul" { MUL }
+  | "beq" { BEQ }
+  | "bneq" { BNEQ }
+  | "bgt" { BGT }
+  | "blt" { BLT }
+  | "bgte" { BGTE }
+  | "blte" { BLTE }
+  | "mov" { MOV }
+  | "st" { ST }
+  | "ld" { LD }
+  | "malloc" { MALLOC }
+  | "unpack" { UNPACK }
   | "Forall" { FORALL }
   | "Exist" { EXIST }
   | "WordPack" { WORD_PACK }
   | "OperandPack" { OPERAND_PACK}
+  | "sfree" { SFREE }
+  | "salloc" { SALLOC }
+  | "sst" { SST }
+  | "sld" { SLD }
   | "as" { AS }
+  | "code" { CODE }
   | "nil" { NIL }
   | "::" { CONS }
   | "@" { APPEND }
@@ -68,12 +91,16 @@ rule read =
   (* Types *)
   | "int" { TINT }
   (* Misc *)
-  | "\n" { NEWLINE }
+  (* | "\n" { NEWLINE } *)
   (* id, int, eof *)
   | label { LABEL (Lexing.lexeme lexbuf) }
   | id { TVAR (Lexing.lexeme lexbuf) }
   | stack_type_var { STVAR (Lexing.lexeme lexbuf) }
+  | comment { COMMENT (Lexing.lexeme lexbuf) }
+  | sl_comment { SINGLE_LINE_COMMENT (Lexing.lexeme lexbuf) }
   | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
+  | immediate { IMMEDIATE (let i = (Lexing.lexeme lexbuf) in 
+    int_of_string (String.sub i 1 (String.length i - 1))) }
   | eof { EOF }
   | _ as c { failwith (Printf.sprintf "unexpected character: %C" c) }
   

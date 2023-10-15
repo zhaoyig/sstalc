@@ -1,5 +1,5 @@
 (library
- (name interp))
+ (name talParser))
 
 (menhir
  (modules parser))

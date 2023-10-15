@@ -1,8 +1,15 @@
 type name = string
 
-type reg = Eax | Ebx | Ecx | Edx | Esi | Edi | Ebp | Esp
+type reg = Eax | Ebx | Ecx | Edx | Esi | Edi | Ebp | Esp | Rax | Rbx | Rcx | Rdx | Rsi | Rdi | Rbp | Rsp
 
-type label = string
+type sp = Sp
+
+type label = 
+  | LStr of string
+  | LAdr of address
+
+and address = 
+  | Address of int
 
 (* Types *)
 
@@ -19,8 +26,6 @@ and ty_asgn =
   | TyAsgnNil
   | TyAsgnCons1 of type_var * ty_asgn
   | TyAsgnCons2 of stack_type_var * ty_asgn
-
-and label_asgn = (label * ty) list
 
 and ty = 
   | Var of type_var (* Type Variable *)
@@ -46,13 +51,20 @@ and stack_type_var =
 
 type heap_val =
   | Words of (word_val) list
-  | Code of ty_asgn * reg_asgn * instruction
+  | HCode of code
+
+and code = 
+  | Code of ty_asgn * reg_asgn * instruction_seq
+
+and code_block =
+  | CodeBlock of label * code
 
 and word_val = 
   | Label of label
   | Immediate of int
   | WordPack of ty * word_val * ty
 (* Omitted polymorphic type instantiation *)
+  | Ptr of address
 
 and operand =
   | Reg of reg
@@ -63,19 +75,35 @@ and operand =
 
 (* Instructions *)
 
+and code_block_seq = 
+  | CodeBlockSeq of code_block
+  | CodeBlockSeqCons of code_block * code_block_seq
+
 and instruction_seq = 
   | Jmp of operand
   | Halt of ty
-  | InstructionSeq of instruction * instruction_seq
+  | InstructionSeq of instruction_line * instruction_seq
+
+and instruction_line =
+  | InstructionLine of instruction * string option
+  | Comment of string
 
 and instruction = 
-  | Aop of aop * reg * reg * operand
+  | Aop of aop * reg * operand
   | Mov of reg * operand
   | Ld of reg * reg * int
   | St of reg * reg * int
   | Bop of bop * reg * operand
-  | Malloc of reg * (operand) list
+  | Malloc of (ty) list
   | Unpack of type_var * reg * operand
+  | Salloc of int
+  | Sfree of int
+  | Movsp1 of sp * reg (* Mov into sp *)
+  | Movsp2 of reg * sp (* Mov out of sp *)
+  | Sst of reg * reg * int
+  | Sld of reg * reg * int
+  | Sstsp of sp * reg * int
+  | Sldsp of reg * sp * int
 
 and aop = 
   | Add | Sub | Mul
