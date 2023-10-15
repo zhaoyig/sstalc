@@ -89,7 +89,7 @@ and instruction_line =
   | Comment of string
 
 and instruction = 
-  | Aop of aop * reg * reg * operand
+  | Aop of aop * reg * operand
   | Mov of reg * operand
   | Ld of reg * reg * int
   | St of reg * reg * int

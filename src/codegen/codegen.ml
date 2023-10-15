@@ -46,7 +46,7 @@ let compileAop = function
   | Mul -> "imul"
 
 let compileOffset offset =
-  (if offset < 0 then "-" else "+") ^ string_of_int offset
+  (if offset < 0 then "-" else "+") ^ string_of_int (offset * 8)
 
 let compileBop = function
   | Beq -> "je"
@@ -57,13 +57,11 @@ let compileBop = function
   | Blte -> "jle"
 
 let rec compileInstruction = function
-  | Aop (aop, reg1, reg2, operand) -> 
+  | Aop (aop, reg1, operand) -> 
     let reg1Exp = compileReg reg1 in
-    let reg2Exp = compileReg reg2 in
     let opExp = compileOperand operand in
     let aopExp = compileAop aop in
     [
-      formatInstruction "mov" [reg1Exp; reg2Exp];
       formatInstruction aopExp [reg1Exp; opExp];
     ]
   | Mov (reg1, operand) -> 

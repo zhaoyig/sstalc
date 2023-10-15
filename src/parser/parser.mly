@@ -110,7 +110,7 @@ instruction_line:
   | SINGLE_LINE_COMMENT { Comment $1 }
 
 instruction:
-  | aop rd = reg COMMA rs = reg COMMA v = operand { Aop ($1, rd, rs, v) }
+  | aop rd = reg COMMA v = operand { Aop ($1, rd, v) }
   | MOV rd = reg COMMA v = operand { Mov (rd, v) }
   | LD rd = reg COMMA rs = reg LPAREN i = INT RPAREN { Ld (rd, rs, i) }
   | ST rd = reg LPAREN i = INT RPAREN COMMA rs = reg { St (rd, rs, i) }
