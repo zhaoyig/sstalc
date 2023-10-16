@@ -1,0 +1,33 @@
+_fact:
+    code[$p, cdot]{ sp: $p, rbx: <>, rcx: int, rax: taop }.
+        bneq rcx, _nonzero
+        mov rbx, $1
+        jmp rax
+_nonzero:
+    code[$p, cdot]{ sp: $p, rbx: <>, rcx: int, rax: taop }.
+        sub rcx, $1
+        mov rdx, rcx
+        add rcx, $1
+        salloc 2
+        sst sp(0), rcx
+        sst sp(-1), rax
+        mov rcx, rdx
+        mov rax, _cont
+        jmp _fact
+_cont:
+    code[$p, cdot]{ sp: int::taop::$p, rbx: int }.
+        sld rcx, sp(0)
+        sld rax, sp(-1)
+        sfree 2
+        mul rbx, rcx
+        jmp rax
+_halt:
+    code[cdot]{ sp: nil, rbx: int}.
+        mov rdi, rbx
+        halt int
+_main:
+    code[cdot]{ sp: nil }.
+        malloc <>
+        mov rcx, $5
+        mov rax, _halt
+        jmp _fact
