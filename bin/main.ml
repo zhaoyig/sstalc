@@ -14,4 +14,4 @@ let speclist = [
 
 let () = 
   Arg.parse speclist (fun file -> inputFile := file) usageMsg;
-  Codegen.compileFile "test/a.stal";
+  Codegen.compileFile !inputFile !outputFile;
