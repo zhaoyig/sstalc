@@ -141,8 +141,8 @@ let rec compileCodeBlockSeq = function
   | CodeBlockSeqCons (code_block, code_block_seq) -> 
       compileCodeBlock code_block @ compileCodeBlockSeq code_block_seq
 
-let compileFile filename = 
-  let ins_seq_seq = parseFile filename in
+let compileFile inputFilename outputFilename = 
+  let ins_seq_seq = parseFile inputFilename in
   let compiledInstructions = String.concat "\n"
     (compileCodeBlockSeq ins_seq_seq) in
   let header = String.concat "\n" [
@@ -151,7 +151,7 @@ let compileFile filename =
     "extern _malloc"
   ]  ^ "\n" in
   let compiledResult = header ^ compiledInstructions in
-  let oc = open_out (filename ^ ".asm") in
+  let oc = open_out (outputFilename) in
   Printf.fprintf oc "%s\n" compiledResult;
   close_out oc
   
