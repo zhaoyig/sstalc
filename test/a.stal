@@ -1,1 +1,0 @@
-HALT Forall[_a, b, _c, d, cdot].{sp: int::nil, EAX: int}
