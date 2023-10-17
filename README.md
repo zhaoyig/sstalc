@@ -16,6 +16,20 @@ ld -macosx_version_min 12.6.0 -L/Library/Developer/CommandLineTools/SDKs/MacOSX.
 ## Note:
 `malloc` will overwrite `rax`
 
+## Typing rule:
+Entry is a code_block_seq
+```
+    env |- codeblock
+-------------------------------
+        env |- CodeBlockSeq codeblock
+```
+
+```
+    env |- cb  env |- cbseq
+-------------------------------
+        env |- CodeBlockSeqCons cb cbseq
+```
+
 TODO:
 - Use bdwgc for malloc
 - Check if Bop is buggy when the registers are the same
