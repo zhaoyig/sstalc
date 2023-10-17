@@ -1,0 +1,5 @@
+(library
+ (name typeCheck))
+
+(menhir
+ (modules parser))
