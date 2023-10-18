@@ -1,40 +1,51 @@
 open TalParser.Main
 open TalParser.Tal
 
-module type StaticEnvironment = sig
-  (** [t] is the type of a static environment. *)
-  type t
+type static_env = label_asgn * reg_asgn * ty_asgn
 
-  (** [empty] is the empty static environment. *)
-  val empty : t
+let empty_env = ([], (Nil, []), TyAsgnNil)
 
-  (** [lookup env x] gets the binding of [x] in [env].
-      Raises: [Failure] if [x] is not bound in [env]. *)
-  val lookup : t -> string -> ty
+let get_str_of_label = function
+  | LAdr _ -> failwith "Invalid label"
+  | LStr s -> s
 
-  (** [extend env x ty] is [env] extended with a binding
-      of [x] to [ty]. *)
-  val extend : t -> string -> ty -> t
-end
+(* Returns the `code` corresponding to label `l`, in the code_block_seq `ast` *)
+let rec lookup_code_block ast l =
+  match ast with
+  | CodeBlockSeq code_block -> 
+    (match code_block with
+      | CodeBlock (label, code) -> 
+        if get_str_of_label label = l then code
+        else failwith ("Cannot find label" ^ l))
+  | CodeBlockSeqCons (h, t) ->
+    (match h with
+      | CodeBlock (label, code) -> 
+        if get_str_of_label label = l then code
+        else lookup_code_block t l)
 
-module StaticEnvironment : StaticEnvironment = struct
-  type t = (string * typ) list
+let get_label_assignment env =
+  let (label_assignment, _, _) = env in
+  label_assignment
 
-  let empty = []
+let lookup_label (env: static_env) x =
+  let (label_assignment, _, _) = env in
+  match List.assoc_opt x label_assignment with
+  | Some t -> t
+  | None -> failwith ("Unbound label: " ^ x)
 
-  let lookup env x =
-    try List.assoc x env
-    with Not_found -> failwith "Unbound variable"
+let extend_label label_assignment label_name typ =
+  (label_name, typ) :: label_assignment
 
-  let extend env x ty =
-    (x, ty) :: env
-end
+and typeof_code (env : static_env) code =
+    match code with
+    | Code (type_assignments, reg_assignments, ins_seq) -> 
+      let _ = typeof_ty_asgn env type_assignments in
+      let _ = typeof_reg_asgn env reg_assignments in
+      Forall (type_assignments, reg_assignments)
 
-let typeof env e = function
-  | CodeBlockSeq codeBlock 
-  | CodeBlockSeqCons codeblock codeBlockSeq
-  
 let typecheck intputFile =
   let ast = parseFile intputFile in
-  let _ = typeof [] ast in
+  (* Enter from the `instruction_seq` of "_main" *)
+  let main = lookup_code_block ast "_main" in
+  let _ = typeof_code empty_env main in
   ast

@@ -33,3 +33,4 @@ Entry is a code_block_seq
 TODO:
 - Use bdwgc for malloc
 - Check if Bop is buggy when the registers are the same
+- hval

@@ -18,10 +18,12 @@ type kind =
   | Ktype   		  (* describes types of all values *)
   | Kstack  		  (* describes types of the stack & pointers into it *)
 
-type reg_asgn = RegAsgn of stack_ty * ((reg_asgn_item) list)
+(* This is Γ *)
+type reg_asgn = stack_ty * ((reg_asgn_item) list)
 
 and reg_asgn_item = RegAsgnItem of reg * ty
 
+(* This is Δ *)
 and ty_asgn =
   | TyAsgnNil
   | TyAsgnCons1 of type_var * ty_asgn
@@ -38,6 +40,7 @@ and ty =
 and type_var =
   | TVar of name
 
+(* This is σ *)
 and stack_ty = 
   | StackTypeVar of stack_type_var
   | Nil
@@ -46,6 +49,9 @@ and stack_ty =
 
 and stack_type_var =
   | STVar of name
+
+(* This is ψ *)
+and label_asgn = (name * ty) list
 
 (* Values *)
 

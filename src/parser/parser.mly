@@ -158,8 +158,8 @@ ty_asgn:
   | TVAR COMMA ty_asgn { TyAsgnCons2 ((STVar $1), $3) }
 
 reg_asgn:
-  | LCB SP COLON st = stack_ty COMMA l = separated_list(COMMA, reg_asgn_item) RCB { RegAsgn (st, l) }
-  | LCB SP COLON st = stack_ty RCB { RegAsgn (st, []) }
+  | LCB SP COLON st = stack_ty COMMA l = separated_list(COMMA, reg_asgn_item) RCB { (st, l) }
+  | LCB SP COLON st = stack_ty RCB { (st, []) }
 
 reg_asgn_item:
   | reg COLON ty { RegAsgnItem ($1, $3) }
