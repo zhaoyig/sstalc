@@ -37,10 +37,35 @@ let lookup_label (env: static_env) x =
 let extend_label label_assignment label_name typ =
   (label_name, typ) :: label_assignment
 
+(* Convert individual reg_asgn_item to kv pair *)
+let reg_asgn_item_to_pair (x : reg_asgn_item) =
+  match x with
+  | RegAsgnItem (r, t) -> (r, t) 
+
+(* Inverse of ^ *)
+let pair_to_reg_asgn_item (x : (reg * ty)) =
+  let (r, t) = x in
+  RegAsgnItem (r, t)
+  
+let lookup_register (env : static_env) (r : reg) : ty =
+  let (_, (_, rf), _) = env in
+  let rf_assoc = List.map reg_asgn_item_to_pair rf in
+  List.assoc r rf_assoc
+
+(* Update all elements with key `k` to have value `v` in a assoc list `l` *)
+let rec update_assoc_list k v l =
+  match l with
+  | [] -> []
+  | h :: t -> 
+    let (kk, _) = h in
+    if kk == k then (kk, v) :: update_assoc_list k v t
+    else h :: update_assoc_list k v t
+
 (* Return a new register assignment with `reg` having type `t` *)
-let update_register_asgn register_asgn reg t =
-  let (_, normal_reg) = register_asgn in
-  let 
+let update_register_asgn (register_asgn : reg_asgn) (r : reg) (t : ty) =
+  let (sp_type, normal_reg) = register_asgn in
+  (sp_type, List.map pair_to_reg_asgn_item 
+    (update_assoc_list r t (List.map reg_asgn_item_to_pair normal_reg)))
 
 (* type *)
 let rec typeof_ty _ _ =
@@ -71,23 +96,32 @@ let typeof_subtype _ _ _ =
   ()
 
 (* seq, jmp, halt *)
-let rec typeof_ins_seq env ins_seq = 
+let rec typeof_ins_seq _ ins_seq = 
   match ins_seq with
-  | Jmp operand ->
+  | Jmp _ ->
       ()
-  | Halt typ ->
+  | Halt _ ->
       ()
-  | InstructionSeq (ins_line, ins_seq) ->
+  | InstructionSeq (_, _) ->
       ()
 
-and typeof_instruction env ins =
+and typeof_instruction (env : static_env) ins =
   match ins with
   | Mov (reg, op) -> (* mov *)
-    let typ = typeof_operand env op
-    let new_env = 
-    ()
+    let (l, r, t) = env in
+    let op_type = typeof_operand env op in
+    let new_env = (l, update_register_asgn r reg op_type, t) in
+    (new_env, ())
+  | _ -> (env, ())
+
+(* reg *)
+and typeof_reg env reg =
+  lookup_register env reg
+
 and typeof_operand env op =
-  failwith "TODO"
+  match op with
+  | Reg reg -> typeof_reg env reg
+  | _ -> Int
 
 and typeof_code (env : static_env) code =
   match code with
