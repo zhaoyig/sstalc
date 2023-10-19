@@ -110,6 +110,7 @@ and instruction =
   | Sld of reg * reg * int
   | Sstsp of sp * reg * int
   | Sldsp of reg * sp * int
+  | Nop 
 
 and aop = 
   | Add | Sub | Mul

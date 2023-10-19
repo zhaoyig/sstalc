@@ -111,6 +111,7 @@ let rec compileInstruction = function
   | Sldsp (r, _, offset) -> [
     formatInstruction "mov" [compileReg r; "[" ^ "rsp" ^ compileOffset offset ^ "]"; ]
   ]
+  | Nop -> []
 
 
 let compileInstructionLine = function
