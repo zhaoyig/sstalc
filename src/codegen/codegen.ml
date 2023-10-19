@@ -46,7 +46,7 @@ let compileAop = function
   | Mul -> "imul"
 
 let compileOffset offset =
-  (if offset < 0 then "-" else "+") ^ string_of_int (offset * 8)
+  (if offset < 0 then "-" else "+") ^ string_of_int ((abs offset) * 8)
 
 let compileBop = function
   | Beq -> "je"
