@@ -1,5 +1,14 @@
 open TalParser.Main
 open TalParser.Tal
+open Prettyprint
+open Utils
+exception TypeError of string
+
+let type_error s = 
+  raise (TypeError s)
+
+let type_err_expect str expected_ty actual_ty =
+  Printf.sprintf "Expect %s to have type %s, but got %s\n" str expected_ty actual_ty
 
 type static_env = label_asgn * reg_asgn * ty_asgn
 
@@ -27,7 +36,7 @@ let get_label_assignment env =
   let (label_assignment, _, _) = env in
   label_assignment
 
-let lookup_label (env: static_env) x =
+let lookup_label (env: static_env) (x : string) : ty =
   let (label_assignment, _, _) = env in
   match List.assoc_opt x label_assignment with
   | Some t -> t
@@ -37,29 +46,12 @@ let lookup_label (env: static_env) x =
 let extend_label label_assignment label_name typ =
   (label_name, typ) :: label_assignment
 
-(* Convert individual reg_asgn_item to kv pair *)
-let reg_asgn_item_to_pair (x : reg_asgn_item) =
-  match x with
-  | RegAsgnItem (r, t) -> (r, t) 
-
-(* Inverse of ^ *)
-let pair_to_reg_asgn_item (x : (reg * ty)) =
-  let (r, t) = x in
-  RegAsgnItem (r, t)
-  
 let lookup_register (env : static_env) (r : reg) : ty =
   let (_, (_, rf), _) = env in
   let rf_assoc = List.map reg_asgn_item_to_pair rf in
-  List.assoc r rf_assoc
-
-(* Update all elements with key `k` to have value `v` in a assoc list `l` *)
-let rec update_assoc_list k v l =
-  match l with
-  | [] -> []
-  | h :: t -> 
-    let (kk, _) = h in
-    if kk == k then (kk, v) :: update_assoc_list k v t
-    else h :: update_assoc_list k v t
+  match (List.assoc_opt r rf_assoc) with
+  | Some t -> t
+  | None -> failwith ("Unbound register: " ^ (pp_reg r))
 
 (* Return a new register assignment with `reg` having type `t` *)
 let update_register_asgn (register_asgn : reg_asgn) (r : reg) (t : ty) =
@@ -96,32 +88,63 @@ let typeof_subtype _ _ _ =
   ()
 
 (* seq, jmp, halt *)
-let rec typeof_ins_seq _ ins_seq = 
+let rec typeof_ins_seq env ins_seq = 
   match ins_seq with
   | Jmp _ ->
       ()
   | Halt _ ->
       ()
-  | InstructionSeq (_, _) ->
-      ()
+  | InstructionSeq (ins_line, ins_seq) -> (* seq *)
+    let ins = (match ins_line with
+      | InstructionLine (ins, _) -> ins
+      | Comment _ -> Nop) in
+    let (new_env, _) = typeof_instruction env ins in
+    typeof_ins_seq new_env ins_seq
 
 and typeof_instruction (env : static_env) ins =
+  print_endline ("typechecking: " ^ pp_instruction ins);
+  print_endline ("current env " ^ pp_env env);
   match ins with
   | Mov (reg, op) -> (* mov *)
     let (l, r, t) = env in
     let op_type = typeof_operand env op in
     let new_env = (l, update_register_asgn r reg op_type, t) in
     (new_env, ())
-  | _ -> (env, ())
+  | Aop (_, r, op) -> (* aop *)
+    let r_ty = typeof_reg env r in
+    let op_ty = typeof_operand env op in
+    let r_typecheck = r_ty = Int in
+    let op_typecheck = op_ty = Int in
+    if r_typecheck && op_typecheck then
+      (env, ())
+    else
+      if not r_typecheck then
+        type_error (type_err_expect (pp_reg r) (pp_ty Int) (pp_ty r_ty))
+      else 
+        if not op_typecheck then
+          type_error (type_err_expect (pp_op op) (pp_ty Int) (pp_ty op_ty))
+        else 
+            (env, ())
+  | _ -> failwith "TODO"
 
 (* reg *)
 and typeof_reg env reg =
   lookup_register env reg
 
+and typeof_word env w =
+  match w with
+  | Label l -> 
+      (match l with
+      | LAdr _ -> failwith "Encountered constant address"
+      | LStr s -> lookup_label env s)
+  | Immediate _ -> Int
+  | _ -> failwith "TODO"
+
 and typeof_operand env op =
   match op with
-  | Reg reg -> typeof_reg env reg
-  | _ -> Int
+  | Reg reg -> typeof_reg env reg (* reg *)
+  | Word word_val -> typeof_word env word_val 
+  | _ -> Int (* TODO *)
 
 and typeof_code (env : static_env) code =
   match code with
@@ -136,4 +159,5 @@ let typecheck intputFile =
   (* Enter from the `instruction_seq` of "_main" *)
   let main = lookup_code_block ast "_main" in
   let _ = typeof_code empty_env main in
+  print_endline "Typechecked" ;
   ast
