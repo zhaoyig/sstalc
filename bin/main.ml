@@ -14,4 +14,5 @@ let speclist = [
 
 let () = 
   Arg.parse speclist (fun file -> inputFile := file) usageMsg;
+  ignore(Typecheck.typecheck !inputFile);
   Codegen.compileFile !inputFile !outputFile;
