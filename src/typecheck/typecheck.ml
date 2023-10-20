@@ -7,8 +7,9 @@ exception TypeError of string
 let type_error s = 
   raise (TypeError s)
 
+(* Return a string about a type mismatch error *)
 let type_err_expect str expected_ty actual_ty =
-  Printf.sprintf "Expect %s to have type %s, but got %s\n" str expected_ty actual_ty
+  Printf.sprintf "Expect %s to have type %s, but got %s\n" str (pp_ty expected_ty) (pp_ty actual_ty)
 
 type static_env = label_asgn * reg_asgn * ty_asgn
 
@@ -48,16 +49,14 @@ let extend_label label_assignment label_name typ =
 
 let lookup_register (env : static_env) (r : reg) : ty =
   let (_, (_, rf), _) = env in
-  let rf_assoc = List.map reg_asgn_item_to_pair rf in
-  match (List.assoc_opt r rf_assoc) with
+  match (List.assoc_opt r rf) with
   | Some t -> t
   | None -> failwith ("Unbound register: " ^ (pp_reg r))
 
 (* Return a new register assignment with `reg` having type `t` *)
 let update_register_asgn (register_asgn : reg_asgn) (r : reg) (t : ty) =
   let (sp_type, normal_reg) = register_asgn in
-  (sp_type, List.map pair_to_reg_asgn_item 
-    (update_assoc_list r t (List.map reg_asgn_item_to_pair normal_reg)))
+  (sp_type, (update_assoc_list r t normal_reg))
 
 (* type *)
 let rec typeof_ty _ _ =
@@ -70,8 +69,8 @@ and typeof_each_rf env (l : (reg_asgn_item) list) =
   match l with
   | [] -> ()
   | h :: t -> 
-    let _ = (match h with
-      | RegAsgnItem (_, typ) -> typeof_ty env typ) in
+    let (_, typ) = h in
+    let _ = typeof_ty env typ in
     typeof_each_rf env t
 
 let typeof_stack_ty _ _ =
@@ -83,17 +82,18 @@ let typeof_reg_asgn env reg_assignments =
   let _ = typeof_stack_ty env stack_type in  
   () (* TODO *)
 
-(* Typecheck if register assignment ra1 is subtype of ra2 *)
+(* Typecheck if register assignment ra1 is subtype of ra2, i.e. ra2 is a subset of ra1 *)
 let typeof_subtype _ _ _ =
   ()
 
 (* seq, jmp, halt *)
 let rec typeof_ins_seq env ins_seq = 
   match ins_seq with
-  | Jmp _ ->
+  | Jmp _ -> (* jmp *)
       ()
-  | Halt _ ->
-      ()
+  | Halt t -> (* halt *)
+    let rax_ty = typeof_reg env Rax in
+    if (not (rax_ty = t)) then type_error (type_err_expect "rax" t rax_ty)
   | InstructionSeq (ins_line, ins_seq) -> (* seq *)
     let ins = (match ins_line with
       | InstructionLine (ins, _) -> ins
@@ -119,10 +119,10 @@ and typeof_instruction (env : static_env) ins =
       (env, ())
     else
       if not r_typecheck then
-        type_error (type_err_expect (pp_reg r) (pp_ty Int) (pp_ty r_ty))
+        type_error (type_err_expect (pp_reg r) Int r_ty)
       else 
         if not op_typecheck then
-          type_error (type_err_expect (pp_op op) (pp_ty Int) (pp_ty op_ty))
+          type_error (type_err_expect (pp_op op) Int op_ty)
         else 
             (env, ())
   | _ -> failwith "TODO"

@@ -1,14 +1,12 @@
-open TalParser.Tal
-
 (* Convert individual reg_asgn_item to kv pair *)
-let reg_asgn_item_to_pair (x : reg_asgn_item) =
+(* let reg_asgn_item_to_pair (x : reg_asgn_item) =
   match x with
-  | RegAsgnItem (r, t) -> (r, t) 
+  | RegAsgnItem (r, t) -> (r, t)  *)
 
 (* Inverse of ^ *)
-let pair_to_reg_asgn_item (x : (reg * ty)) =
+(* let pair_to_reg_asgn_item (x : (reg * ty)) =
   let (r, t) = x in
-  RegAsgnItem (r, t)
+  RegAsgnItem (r, t) *)
 
 (** Update all elements with key `k` to have value `v` in a assoc list `l`
     If not present, insert this new element *)

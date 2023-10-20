@@ -21,7 +21,7 @@ type kind =
 (* This is Γ *)
 type reg_asgn = stack_ty * ((reg_asgn_item) list)
 
-and reg_asgn_item = RegAsgnItem of reg * ty
+and reg_asgn_item = reg * ty
 
 (* This is Δ *)
 and ty_asgn =

@@ -1,6 +1,5 @@
 open Codegen
 open TalParser.Tal
-open Utils
 
 let pp_reg = function
   | Eax -> "eax"
@@ -46,7 +45,7 @@ let pp_env (env) = (* TODO *)
   let (stack, normal_reg) = r in
   let r_str = (pp_stack_ty stack)
     ^ String.concat "," (List.map 
-        (fun x -> (let (rr, tt) = reg_asgn_item_to_pair x in
+        (fun x -> (let (rr, tt) = x in
          (pp_reg rr) ^ (pp_ty tt) ))
         normal_reg) in
   Printf.sprintf "H: %s | R: %s | TypeVar: %s" "TODO" r_str "TODO"

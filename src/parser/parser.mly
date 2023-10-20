@@ -162,7 +162,7 @@ reg_asgn:
   | LCB SP COLON st = stack_ty RCB { (st, []) }
 
 reg_asgn_item:
-  | reg COLON ty { RegAsgnItem ($1, $3) }
+  | reg COLON ty { ($1, $3) }
 
 word_val:
   | x = LABEL { Label (LStr x) }
