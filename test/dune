@@ -1,2 +1,2 @@
-(test
- (name stalc))
+(tests (names test_typecheck)
+(libraries typecheck talParser ounit2))
