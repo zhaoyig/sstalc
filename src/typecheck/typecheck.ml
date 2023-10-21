@@ -59,32 +59,111 @@ let update_register_asgn (register_asgn : reg_asgn) (r : reg) (t : ty) =
   (sp_type, (update_assoc_list r t normal_reg))
 
 (* type *)
-let rec typeof_ty _ _ =
+let typecheck_ty _ _ =
   (* let free_vars = get_free_vars typ in
   let unbound_free_vars = subset_of env free_vars in *)
-  () (* TODO *)
+  true (* TODO *)
 
-(* Iterate through register fiheck each type *)
-and typeof_each_rf env (l : (reg_asgn_item) list) =  
+(* stype *)
+let rec typecheck_sty _ _ =
+  true (* TODO *)
+
+(* Iterate through normal registers and typecheck each type *)
+and typeof_each_rf env l =  
   match l with
   | [] -> ()
   | h :: t -> 
     let (_, typ) = h in
-    let _ = typeof_ty env typ in
+    let _ = typecheck_ty env typ in
     typeof_each_rf env t
-
-let typeof_stack_ty _ _ =
-  ()
 
 (* rftype *)
 let typeof_reg_asgn env reg_assignments =
   let (stack_type, _) = reg_assignments in
-  let _ = typeof_stack_ty env stack_type in  
+  let _ = typecheck_sty env stack_type in  
   () (* TODO *)
 
-(* Typecheck if register assignment ra1 is subtype of ra2, i.e. ra2 is a subset of ra1 *)
-let typeof_subtype _ _ _ =
-  ()
+(* Check if ra2 is a subset of ra1 *)
+let rec subset_of ra2 ra1 =
+  match ra2 with
+  | [] -> true
+  | h :: t -> 
+    (match List.find_opt (fun x -> x = h) ra1 with
+    | Some _ -> true && (subset_of t ra1)
+    | None -> false)
+
+(* Typecheck if two stack types are equal *)
+let rec typecheck_stack_eq env (sty1 : stack_ty) (sty2 : stack_ty) 
+  (memo : (stack_ty * stack_ty) list) =
+  if (List.exists (fun x -> x = (sty1, sty2)) memo) then
+    false
+  else 
+  let _ = 
+    raise (TypeError ("fail to typecheck the equality of " ^ (pp_sty sty1) 
+      ^ " and " ^ (pp_sty sty2))) in
+  match sty1, sty2 with
+  (* stkβ4 *)
+  | Append (Append (sigma1, sigma2), sigma3), 
+    Append (sigma1', Append (sigma2', sigma3'))
+    when sigma1 = sigma1' && sigma2 = sigma2' && sigma3 = sigma3'
+      && typecheck_sty env sigma1 && typecheck_sty env sigma2 
+      && typecheck_sty env sigma3 -> true
+  (* stkβ3 *)
+  | Append (Cons (t, sigma1), sigma2), Cons (t', Append (sigma1', sigma2'))
+    when sigma1 = sigma1' && sigma2 = sigma2' && t = t'
+      && typecheck_sty env sigma1 && typecheck_sty env sigma2
+      && typecheck_ty env t -> true
+  (* stkβ2 *)
+  | Append (sigma, Nil), sigma'
+    when sigma = sigma' && typecheck_sty env sigma -> true
+  (* stkβ1 *)
+  | Append (Nil, sigma), sigma'
+    when sigma = sigma' && typecheck_sty env sigma -> true
+  (* seq-append *)
+  | Append (sigma1, sigma2), Append (sigma1', sigma2')
+    when typecheck_stack_eq env sigma1 sigma1' ((sigma1, sigma1') :: memo)
+      && typecheck_stack_eq env sigma2 sigma2' ((sigma2, sigma2') :: memo) -> 
+    true
+  (* seq-cons *)
+  | Cons (t, sigma1), Cons (t', sigma2)
+    when t = t' && typecheck_ty env t 
+      && typecheck_stack_eq env sigma1 sigma2 ((sigma1, sigma2) :: memo) ->
+      true
+  (* seq-refl *)
+  | sigma, sigma' when sigma = sigma' -> true
+  (* seq-trans *) 
+  (* TODO: Check *)
+  | sigma1, sigma3
+    when (
+      let (_, _, t) = env in
+      let rec find_trans_sty t =
+        (match t with 
+        | TyAsgnNil -> false
+        | TyAsgnCons1 (_, ty_asgn) -> find_trans_sty ty_asgn
+        | TyAsgnCons2 (sty_var, _)
+          when typecheck_stack_eq env sigma1 (StackTypeVar sty_var) ((sigma1, (StackTypeVar sty_var)) :: memo)
+            && typecheck_stack_eq env (StackTypeVar sty_var) sigma3 (((StackTypeVar sty_var), sigma3) :: memo) -> true
+        | TyAsgnCons2 (_, ty_asgn) -> find_trans_sty ty_asgn)
+      in
+      find_trans_sty t
+    ) -> true
+  (* seq-sym *)
+  (* This will get stuck *)
+  | sigma1, sigma2 when typecheck_stack_eq env sigma2 sigma1 ((sigma2, sigma1) :: memo) -> true
+  | _, _ -> false
+
+(* Typecheck if register assignment ra1 is subtype of ra2, i.e. ra2 is a subset 
+   of ra1 *)
+let typecheck_subtype env ra1 ra2 =
+  let (st1, normal_reg1) = ra1 in
+  let (st2, normal_reg2) = ra2 in
+  if subset_of normal_reg2 normal_reg1 then type_error ((pp_reg_asgn ra1) 
+    ^ " is not a subtype of " ^ (pp_reg_asgn ra2))
+  else
+    let _ = typeof_each_rf env normal_reg1 in
+    let _ = typeof_each_rf env normal_reg2 in
+    let _ = typecheck_stack_eq env st1 st2 [] in
+    ()
 
 (* seq, jmp, halt *)
 let rec typeof_ins_seq env ins_seq = 

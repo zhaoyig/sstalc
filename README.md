@@ -34,3 +34,4 @@ TODO:
 - Use bdwgc for malloc
 - Check if Bop is buggy when the registers are the same
 - hval
+- stack equality, correctness? (get stuck)

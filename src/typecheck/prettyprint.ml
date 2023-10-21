@@ -36,16 +36,21 @@ let pp_op = function
   | Word _ -> "Word(TODO)"
   | _ -> "TODO"
 
-let pp_stack_ty = function
-  | StackTypeVar _ -> "stack???"
-  | _ -> "" (* TODO *)
+let rec pp_sty = function
+  | StackTypeVar _ -> "stackVar"
+  | Append (st1, st2) -> "(" ^ (pp_sty st1) ^ " @ " ^ (pp_sty st2) ^ ")"
+  | Cons (t, st) -> "(" ^ pp_ty t ^ " :: " ^ pp_sty st ^ ")"
+  | _ -> " " (* TODO *)
 
-let pp_env (env) = (* TODO *)
-  let (_, r, _) = env in
-  let (stack, normal_reg) = r in
-  let r_str = (pp_stack_ty stack)
+let pp_reg_asgn ra =
+  let (stack, normal_reg) = ra in
+  (pp_sty stack)
     ^ String.concat "," (List.map 
         (fun x -> (let (rr, tt) = x in
-         (pp_reg rr) ^ (pp_ty tt) ))
-        normal_reg) in
-  Printf.sprintf "H: %s | R: %s | TypeVar: %s" "TODO" r_str "TODO"
+         (pp_reg rr) ^ " : " ^ (pp_ty tt) ))
+        normal_reg)
+  
+let pp_env (env) = (* TODO *)
+  let (_, r, _) = env in
+  let reg_asgn_str = pp_reg_asgn r in
+  Printf.sprintf "H: %s | R: %s | TypeVar: %s" "TODO" reg_asgn_str "TODO"
