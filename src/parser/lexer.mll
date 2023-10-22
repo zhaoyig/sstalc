@@ -90,6 +90,7 @@ rule read =
   | ")" { RPAREN }
   (* Types *)
   | "int" { TINT }
+  | "top" { TTOP }
   (* Misc *)
   (* | "\n" { NEWLINE } *)
   (* id, int, eof *)

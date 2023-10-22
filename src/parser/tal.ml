@@ -24,10 +24,15 @@ type reg_asgn = stack_ty * ((reg_asgn_item) list)
 and reg_asgn_item = reg * ty
 
 (* This is Δ *)
-and ty_asgn =
-  | TyAsgnNil
+and ty_asgn = ty_asgn_item list
+(* An old definition *)
+  (* | TyAsgnNil
   | TyAsgnCons1 of type_var * ty_asgn
-  | TyAsgnCons2 of stack_type_var * ty_asgn
+  | TyAsgnCons2 of stack_type_var * ty_asgn *)
+
+and ty_asgn_item = 
+  | TAITVar of type_var
+  | TAISTVar of stack_type_var
 
 and ty = 
   | Var of type_var (* Type Variable *)
@@ -36,6 +41,7 @@ and ty =
   | Forall of ty_asgn * reg_asgn
   | Exist of type_var * ty
   | TPtr of stack_ty
+  | TTop
   
 and type_var =
   | TVar of name

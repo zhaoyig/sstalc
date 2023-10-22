@@ -13,7 +13,7 @@ let type_err_expect str expected_ty actual_ty =
 
 type static_env = label_asgn * reg_asgn * ty_asgn
 
-let empty_env = ([], (Nil, []), TyAsgnNil)
+let empty_env = ([], (Nil, []), [])
 
 let get_str_of_label = function
   | LAdr _ -> failwith "Invalid label"
@@ -58,6 +58,34 @@ let update_register_asgn (register_asgn : reg_asgn) (r : reg) (t : ty) =
   let (sp_type, normal_reg) = register_asgn in
   (sp_type, (update_assoc_list r t normal_reg))
 
+(* All the elements in l1 that is not in l2 *)
+let diff l1 l2 = List.filter (fun x -> not (List.mem x l2)) l1
+
+(* free vars of a register asgn *)
+let rec free_vars_ra (ra : reg_asgn) =
+  let (sty, normal_reg) = ra in
+  (free_vars_sty sty) @ (List.concat_map (fun x -> let (_, t) = x in free_vars_ty t) normal_reg)
+
+and free_vars_sty sty = 
+  match sty with
+  | StackTypeVar v -> [TAISTVar v]
+  | Nil -> []
+  | Cons (typ, sty) -> (free_vars_ty typ) @ free_vars_sty sty
+  | Append (sty1, sty2) -> (free_vars_sty sty1) @ free_vars_sty sty2
+
+(* return the free variables in a `ty` as a list *)
+and free_vars_ty (typ : ty) =
+  match typ with
+  | Var v -> [TAITVar v] (* Type variable *)
+  | Int -> []
+  | TypeList l -> List.concat_map free_vars_ty l
+  | Forall (ta, ra) -> 
+    let l1 = free_vars_ra ra in
+    let l2 = ta in
+    diff l1 l2
+  | Exist (tv, typp) -> diff (free_vars_ty typp) [TAITVar tv] 
+  | _ -> []
+
 (* type *)
 let typecheck_ty _ _ =
   (* let free_vars = get_free_vars typ in
@@ -95,12 +123,10 @@ let rec subset_of ra2 ra1 =
 (* Typecheck if two stack types are equal *)
 let rec typecheck_stack_eq env (sty1 : stack_ty) (sty2 : stack_ty) 
   (memo : (stack_ty * stack_ty) list) =
+  print_endline ("typechecking equality of " ^ (pp_sty sty1) ^ " and " ^ (pp_sty sty2));
   if (List.exists (fun x -> x = (sty1, sty2)) memo) then
     false
-  else 
-  let _ = 
-    raise (TypeError ("fail to typecheck the equality of " ^ (pp_sty sty1) 
-      ^ " and " ^ (pp_sty sty2))) in
+  else
   match sty1, sty2 with
   (* stkβ4 *)
   | Append (Append (sigma1, sigma2), sigma3), 
@@ -136,17 +162,17 @@ let rec typecheck_stack_eq env (sty1 : stack_ty) (sty2 : stack_ty)
   | sigma1, sigma3
     when (
       let (_, _, t) = env in
-      let rec find_trans_sty t =
-        (match t with 
+      let find_trans_sty _ = true in
+        (* (match t with 
         | TyAsgnNil -> false
         | TyAsgnCons1 (_, ty_asgn) -> find_trans_sty ty_asgn
         | TyAsgnCons2 (sty_var, _)
           when typecheck_stack_eq env sigma1 (StackTypeVar sty_var) ((sigma1, (StackTypeVar sty_var)) :: memo)
             && typecheck_stack_eq env (StackTypeVar sty_var) sigma3 (((StackTypeVar sty_var), sigma3) :: memo) -> true
-        | TyAsgnCons2 (_, ty_asgn) -> find_trans_sty ty_asgn)
-      in
-      find_trans_sty t
-    ) -> true
+        | TyAsgnCons2 (_, ty_asgn) -> find_trans_sty ty_asgn) *)
+      let _ = sigma1 in 
+      let _ = sigma3 in
+      find_trans_sty t) -> true
   (* seq-sym *)
   (* This will get stuck *)
   | sigma1, sigma2 when typecheck_stack_eq env sigma2 sigma1 ((sigma2, sigma1) :: memo) -> true

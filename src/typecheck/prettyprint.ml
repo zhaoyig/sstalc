@@ -30,6 +30,7 @@ let rec pp_ty = function
   | Exist (_, _) -> "Exist(TODO)"
   | Var _ -> "Type Var(TODO)"
   | TPtr _ -> "Stack pointer(TODO)"
+  | TTop -> "⊤"
 
 let pp_op = function
   | Reg r -> pp_reg r
@@ -40,7 +41,7 @@ let rec pp_sty = function
   | StackTypeVar _ -> "stackVar"
   | Append (st1, st2) -> "(" ^ (pp_sty st1) ^ " @ " ^ (pp_sty st2) ^ ")"
   | Cons (t, st) -> "(" ^ pp_ty t ^ " :: " ^ pp_sty st ^ ")"
-  | _ -> " " (* TODO *)
+  | Nil -> "nil" (* TODO *)
 
 let pp_reg_asgn ra =
   let (stack, normal_reg) = ra in

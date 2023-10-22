@@ -66,6 +66,7 @@ open Stdlib
 %token TPTR (* Pointer type *)
 %token SP
 %token TY_ASGN_NIL
+%token TTOP
 
 (* Special Chars *)
 %token LTS (* less than sign *)
@@ -145,6 +146,7 @@ ty:
   | FORALL LSB a = ty_asgn RSB DOT r = reg_asgn { Forall (a, r) }
   | EXIST TVAR DOT ty { Exist (TVar $2, $4) }
   | TPTR LPAREN stack_ty RPAREN { TPtr $3 }
+  | TTOP { TTop }
 
 stack_ty:
   | STVAR { StackTypeVar (STVar $1) }
@@ -153,9 +155,11 @@ stack_ty:
   | stack_ty APPEND stack_ty { Append ($1, $3) }
 
 ty_asgn:
-  | TY_ASGN_NIL { TyAsgnNil }
-  | STVAR COMMA ty_asgn { TyAsgnCons1 ((TVar $1), $3) }
-  | TVAR COMMA ty_asgn { TyAsgnCons2 ((STVar $1), $3) }
+  | separated_list(COMMA, ty_asgn_item) { $1 }
+
+ty_asgn_item:
+  | STVAR { TAITVar (TVar $1) }
+  | TVAR { TAISTVar (STVar $1) }
 
 reg_asgn:
   | LCB SP COLON st = stack_ty COMMA l = separated_list(COMMA, reg_asgn_item) RCB { (st, l) }
