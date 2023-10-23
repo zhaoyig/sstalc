@@ -70,8 +70,8 @@ and free_vars_sty sty =
   match sty with
   | StackTypeVar v -> [TAISTVar v]
   | Nil -> []
-  | Cons (typ, sty) -> (free_vars_ty typ) @ free_vars_sty sty
-  | Append (sty1, sty2) -> (free_vars_sty sty1) @ free_vars_sty sty2
+  | Cons (typ, sty) -> (free_vars_ty typ) @ (free_vars_sty sty)
+  | Append (sty1, sty2) -> (free_vars_sty sty1) @ (free_vars_sty sty2)
 
 (* return the free variables in a `ty` as a list *)
 and free_vars_ty (typ : ty) =
@@ -84,7 +84,8 @@ and free_vars_ty (typ : ty) =
     let l2 = ta in
     diff l1 l2
   | Exist (tv, typp) -> diff (free_vars_ty typp) [TAITVar tv] 
-  | _ -> []
+  | TPtr sty -> free_vars_sty sty
+  | TTop -> []
 
 (* type *)
 let typecheck_ty _ _ =
@@ -120,64 +121,26 @@ let rec subset_of ra2 ra1 =
     | Some _ -> true && (subset_of t ra1)
     | None -> false)
 
-(* Typecheck if two stack types are equal *)
-let rec typecheck_stack_eq env (sty1 : stack_ty) (sty2 : stack_ty) 
-  (memo : (stack_ty * stack_ty) list) =
-  print_endline ("typechecking equality of " ^ (pp_sty sty1) ^ " and " ^ (pp_sty sty2));
-  if (List.exists (fun x -> x = (sty1, sty2)) memo) then
-    false
-  else
-  match sty1, sty2 with
-  (* stkβ4 *)
-  | Append (Append (sigma1, sigma2), sigma3), 
-    Append (sigma1', Append (sigma2', sigma3'))
-    when sigma1 = sigma1' && sigma2 = sigma2' && sigma3 = sigma3'
-      && typecheck_sty env sigma1 && typecheck_sty env sigma2 
-      && typecheck_sty env sigma3 -> true
-  (* stkβ3 *)
-  | Append (Cons (t, sigma1), sigma2), Cons (t', Append (sigma1', sigma2'))
-    when sigma1 = sigma1' && sigma2 = sigma2' && t = t'
-      && typecheck_sty env sigma1 && typecheck_sty env sigma2
-      && typecheck_ty env t -> true
-  (* stkβ2 *)
-  | Append (sigma, Nil), sigma'
-    when sigma = sigma' && typecheck_sty env sigma -> true
-  (* stkβ1 *)
-  | Append (Nil, sigma), sigma'
-    when sigma = sigma' && typecheck_sty env sigma -> true
-  (* seq-append *)
-  | Append (sigma1, sigma2), Append (sigma1', sigma2')
-    when typecheck_stack_eq env sigma1 sigma1' ((sigma1, sigma1') :: memo)
-      && typecheck_stack_eq env sigma2 sigma2' ((sigma2, sigma2') :: memo) -> 
-    true
-  (* seq-cons *)
-  | Cons (t, sigma1), Cons (t', sigma2)
-    when t = t' && typecheck_ty env t 
-      && typecheck_stack_eq env sigma1 sigma2 ((sigma1, sigma2) :: memo) ->
-      true
-  (* seq-refl *)
-  | sigma, sigma' when sigma = sigma' -> true
-  (* seq-trans *) 
-  (* TODO: Check *)
-  | sigma1, sigma3
-    when (
-      let (_, _, t) = env in
-      let find_trans_sty _ = true in
-        (* (match t with 
-        | TyAsgnNil -> false
-        | TyAsgnCons1 (_, ty_asgn) -> find_trans_sty ty_asgn
-        | TyAsgnCons2 (sty_var, _)
-          when typecheck_stack_eq env sigma1 (StackTypeVar sty_var) ((sigma1, (StackTypeVar sty_var)) :: memo)
-            && typecheck_stack_eq env (StackTypeVar sty_var) sigma3 (((StackTypeVar sty_var), sigma3) :: memo) -> true
-        | TyAsgnCons2 (_, ty_asgn) -> find_trans_sty ty_asgn) *)
-      let _ = sigma1 in 
-      let _ = sigma3 in
-      find_trans_sty t) -> true
-  (* seq-sym *)
-  (* This will get stuck *)
-  | sigma1, sigma2 when typecheck_stack_eq env sigma2 sigma1 ((sigma2, sigma1) :: memo) -> true
-  | _, _ -> false
+(* Flatten a sty from having Append to just having Cons *)
+let rec flatten_sty sty =
+  match sty with
+  | Nil -> Nil
+  | Cons (typ, sty) -> Cons (typ, flatten_sty sty)
+  | Append (_, _) -> (
+    (* let sty1_flattened = flatten_sty sty1 in
+    let sty2_flattened = flatten_sty sty2 in
+    concat_sty *)
+    Nil (* TODO *)
+  )
+  | v -> v
 
+(* Typecheck if two stack types are equal *)
+let typecheck_stack_eq _ (sty1 : stack_ty) (sty2 : stack_ty) =
+  let sty1_flattened = flatten_sty sty1 in
+  let sty2_flattened = flatten_sty sty2 in
+  if not (sty1_flattened = sty2_flattened) then
+    type_error ("Can't typeecheck the equality of " ^ (pp_sty sty1) ^ " and " ^ (pp_sty sty2))
+  
 (* Typecheck if register assignment ra1 is subtype of ra2, i.e. ra2 is a subset 
    of ra1 *)
 let typecheck_subtype env ra1 ra2 =
@@ -188,7 +151,7 @@ let typecheck_subtype env ra1 ra2 =
   else
     let _ = typeof_each_rf env normal_reg1 in
     let _ = typeof_each_rf env normal_reg2 in
-    let _ = typecheck_stack_eq env st1 st2 [] in
+    let _ = typecheck_stack_eq env st1 st2 in
     ()
 
 (* seq, jmp, halt *)

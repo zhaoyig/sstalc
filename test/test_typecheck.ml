@@ -13,9 +13,21 @@ let tests = "test suite for typecheck" >::: [
     let sigma3 = Cons (TypeList [Int; Int], Nil) in
     let sty1 = Append(Append (sigma1, sigma2), sigma3) in
     let sty2 = Append(sigma1, Append(sigma2, sigma3)) in
-    assert_bool "" (typecheck_stack_eq empty_env sty1 sty2 []));
+    typecheck_stack_eq empty_env sty1 sty2; );
   "stack equality 2" >:: (fun _ -> 
     ()
+  );
+  "free var type 1" >:: (fun _ -> 
+    let ta = [TAISTVar (STVar "a"); TAITVar (TVar "b")] in
+    let ra = ((StackTypeVar (STVar "a")), [(Rax, Int); (Rbx, (Var (TVar "b"))); (Rcx, (Var (TVar "c")))]) in
+    let fv = free_vars_ty (Forall (ta, ra)) in
+    assert_equal fv [TAITVar (TVar "c")]
+  );
+  "free var type 2" >:: (fun _ -> (* Variables bound in Forall type and Exist type not considered free *)
+    let ta = [TAISTVar (STVar "a"); TAITVar (TVar "b")] in
+    let ra = ((StackTypeVar (STVar "a")), [(Rax, Int); (Rbx, (Var (TVar "b"))); (Rcx, (Var (TVar "c")))]) in
+    let fv = free_vars_ty (TypeList [Forall (ta, ra); (Var (TVar "d")); Exist ((TVar "exist_var"), TypeList [(Var (TVar "exist_var")); (Var (TVar "e"))])]) in
+    assert_equal fv [TAITVar (TVar "c"); TAITVar (TVar "d"); TAITVar (TVar "e")]
   )
 ]
 
