@@ -11,6 +11,11 @@ dune exec -- stalc test/factorial.stal -o test/factorial.asm
 ```bash
 nasm -f macho64 factorial.asm
 ld -macosx_version_min 12.6.0 -L/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib -lSystem -o factorial factorial.o
+./factorial
+```
+## To run tests
+```
+dune runtest
 ```
 
 ## Note:
