@@ -88,29 +88,36 @@ and free_vars_ty (typ : ty) =
   | TTop -> []
 
 (* type *)
-let typecheck_ty _ _ =
-  (* let free_vars = get_free_vars typ in
-  let unbound_free_vars = subset_of env free_vars in *)
-  true (* TODO *)
+let typecheck_ty env typ =
+  let free_vars = free_vars_ty typ in
+  let (_, _, env_vars) = env in
+  let unbound_free_vars = diff free_vars env_vars in
+  if unbound_free_vars <> [] then
+    type_error ("" ^ "is unbound in type " ^ " ") (* TODO *)
 
 (* stype *)
-let rec typecheck_sty _ _ =
-  true (* TODO *)
+let rec typecheck_sty env sty =
+  let free_vars = free_vars_sty sty in
+  let (_, _, env_vars) = env in
+  let unbound_free_vars = diff free_vars env_vars in
+  if unbound_free_vars <> [] then
+    type_error ("" ^ "is unbound in type " ^ " ") (* TODO *)
 
 (* Iterate through normal registers and typecheck each type *)
-and typeof_each_rf env l =  
+and typecheck_each_ra env l =  
   match l with
   | [] -> ()
   | h :: t -> 
     let (_, typ) = h in
     let _ = typecheck_ty env typ in
-    typeof_each_rf env t
+    typecheck_each_ra env t
 
 (* rftype *)
 let typeof_reg_asgn env reg_assignments =
-  let (stack_type, _) = reg_assignments in
+  let (stack_type, ra) = reg_assignments in
   let _ = typecheck_sty env stack_type in  
-  () (* TODO *)
+  let _ = typecheck_each_ra env ra in
+  ()
 
 (* Check if ra2 is a subset of ra1 *)
 let rec subset_of ra2 ra1 =
@@ -149,8 +156,8 @@ let typecheck_subtype env ra1 ra2 =
   if subset_of normal_reg2 normal_reg1 then type_error ((pp_reg_asgn ra1) 
     ^ " is not a subtype of " ^ (pp_reg_asgn ra2))
   else
-    let _ = typeof_each_rf env normal_reg1 in
-    let _ = typeof_each_rf env normal_reg2 in
+    let _ = typecheck_each_ra env normal_reg1 in
+    let _ = typecheck_each_ra env normal_reg2 in
     let _ = typecheck_stack_eq env st1 st2 in
     ()
 
