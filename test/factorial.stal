@@ -1,10 +1,10 @@
 _fact:
-    code[$p, cdot]{ sp: $p, rbx: <>, rcx: int, rax: taop }.
+    code[$p]{ sp: $p, rbx: <>, rcx: int, rax: taop }.
         bneq rcx, _nonzero
         mov rbx, $1
         jmp rax
 _nonzero:
-    code[$p, cdot]{ sp: $p, rbx: <>, rcx: int, rax: taop }.
+    code[$p]{ sp: $p, rbx: <>, rcx: int, rax: taop }.
         sub rcx, $1
         mov rdx, rcx
         add rcx, $1
@@ -15,18 +15,18 @@ _nonzero:
         mov rax, _cont
         jmp _fact
 _cont:
-    code[$p, cdot]{ sp: int::taop::$p, rbx: int }.
+    code[$p]{ sp: int::taop::$p, rbx: int }.
         sld rcx, sp(0)
         sld rax, sp(-1)
         sfree 2
         mul rbx, rcx
         jmp rax
 _halt:
-    code[cdot]{ sp: nil, rbx: int}.
+    code[]{ sp: nil, rbx: int}.
         mov rdi, rbx
         halt int
 _main:
-    code[cdot]{ sp: nil }.
+    code[]{ sp: nil }.
         malloc <>
         mov rcx, $5
         mov rax, _halt
