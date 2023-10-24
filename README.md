@@ -40,4 +40,4 @@ TODO:
 - Check if Bop is buggy when the registers are the same
 - hval
 - stack equality, correctness? (get stuck)
-- forall type free variables?
+- ~~forall type free variables?~~

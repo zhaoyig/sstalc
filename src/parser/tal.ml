@@ -77,6 +77,7 @@ and word_val =
   | WordPack of ty * word_val * ty
 (* Omitted polymorphic type instantiation *)
   | Ptr of address
+  | Ns
 
 and operand =
   | Reg of reg

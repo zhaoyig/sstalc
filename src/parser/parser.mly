@@ -67,6 +67,7 @@ open Stdlib
 %token SP
 %token TY_ASGN_NIL
 %token TTOP
+%token NS
 
 (* Special Chars *)
 %token LTS (* less than sign *)
@@ -173,6 +174,7 @@ word_val:
   | x = INT { Label (LAdr (Address x)) }
   | x = IMMEDIATE { Immediate x }
   | WORD_PACK LSB t = ty COMMA w = word_val RSB AS tprime = ty { WordPack (t, w, tprime)}
+  | NS { Ns }
 
 reg:
   | EAX { Eax }

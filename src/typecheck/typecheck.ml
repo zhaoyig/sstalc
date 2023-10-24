@@ -188,8 +188,8 @@ and typeof_instruction (env : static_env) ins =
   | Aop (_, r, op) -> (* aop *)
     let r_ty = typeof_reg env r in
     let op_ty = typeof_operand env op in
-    let r_typecheck = r_ty = Int in
-    let op_typecheck = op_ty = Int in
+    let r_typecheck = (r_ty = Int) in
+    let op_typecheck = (op_ty = Int) in
     if r_typecheck && op_typecheck then
       (env, ())
     else
@@ -206,14 +206,49 @@ and typeof_instruction (env : static_env) ins =
 and typeof_reg env reg =
   lookup_register env reg
 
+and reg_asgn_substitute (ra : reg_asgn) (typ : ty) (tv : type_var) =
+  let (sty, normal_reg) = ra in
+  let normal_reg_substed = List.map (fun x -> (
+    let (r, t) = x in
+    (r, ty_substitute t typ tv)
+  )) normal_reg in
+  let sty_substed = sty_substitute sty typ tv in
+  (sty_substed, normal_reg_substed)
+
+(* Within `t`, replace occurences of `typ` with `tv` *)
+and ty_substitute (t : ty) (typ : ty) (tv : type_var) =
+  let rec subst (tao : ty) =
+    match tao with
+    | TypeList l -> TypeList (List.map (fun x -> subst x) l)
+    | Forall (ta, ra) -> Forall (ta, (reg_asgn_substitute ra typ tv))
+    | Exist (alpha, tao) -> Exist (alpha, subst tao)
+    | TPtr sty -> TPtr (sty_substitute sty typ tv)
+    | Int | TTop | Var _ -> if (tao = typ) then Var tv else tao
+  in
+  subst t
+
+and sty_substitute (sty : stack_ty) (typ : ty) (tv : type_var) =
+  let rec subst (sigma : stack_ty) = 
+    match sigma with
+    | Nil -> Nil
+    | Cons (tao, sigma') -> Cons (ty_substitute tao typ tv, subst sigma')
+    | StackTypeVar _ -> sigma
+    | Append (sigma1, sigma2) -> Append (subst sigma1, subst sigma2)
+  in
+  subst sty
+
 and typeof_word env w =
   match w with
-  | Label l -> 
+  | Label l -> (* label *)
       (match l with
       | LAdr _ -> failwith "Encountered constant address"
       | LStr s -> lookup_label env s)
-  | Immediate _ -> Int
-  | _ -> failwith "TODO"
+  | Immediate _ -> Int (* int *)
+  | Ns -> TTop (* ns *)
+  | Ptr _ -> (* ptr *)
+    TPtr Nil 
+  | WordPack (_, _, _) -> (* pack *)
+    TTop (* TODO *)
 
 and typeof_operand env op =
   match op with

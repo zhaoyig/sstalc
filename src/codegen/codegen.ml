@@ -34,6 +34,7 @@ let rec compileWordVal = function
   | Immediate i -> string_of_int i
   | WordPack (_, wordVal, _) -> compileWordVal wordVal
   | Ptr adr -> compileAdress adr
+  | Ns -> "0"
 
 let rec compileOperand = function
   | Reg r -> compileReg r

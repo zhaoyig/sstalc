@@ -28,7 +28,8 @@ let tests = "test suite for typecheck" >::: [
     let ra = ((StackTypeVar (STVar "a")), [(Rax, Int); (Rbx, (Var (TVar "b"))); (Rcx, (Var (TVar "c")))]) in
     let fv = free_vars_ty (TypeList [Forall (ta, ra); (Var (TVar "d")); Exist ((TVar "exist_var"), TypeList [(Var (TVar "exist_var")); (Var (TVar "e"))])]) in
     assert_equal fv [TAITVar (TVar "c"); TAITVar (TVar "d"); TAITVar (TVar "e")]
-  )
+  );
+  "substitution type" >:: (fun _ -> ())
 ]
 
 let _ = run_test_tt_main tests

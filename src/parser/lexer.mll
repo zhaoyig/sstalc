@@ -91,6 +91,7 @@ rule read =
   (* Types *)
   | "int" { TINT }
   | "top" { TTOP }
+  | "ns" { NS }
   (* Misc *)
   (* | "\n" { NEWLINE } *)
   (* id, int, eof *)
