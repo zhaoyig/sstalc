@@ -128,24 +128,27 @@ let rec subset_of ra2 ra1 =
     | Some _ -> true && (subset_of t ra1)
     | None -> false)
 
-(* Flatten a sty from having Append to just having Cons *)
-let rec flatten_sty sty =
+(* To make life easy *)
+let (@@) sty1 sty2 = Append (sty1, sty2)
+let (++) ty sty = Cons (ty, sty)
+
+type stack_item =
+  | SITy of ty
+  | SISty of stack_ty
+
+(* Serialize a stack_ty into a list of stack_item (either stack type variable or ty) *)
+let rec serialize_sty sty = 
   match sty with
-  | Nil -> Nil
-  | Cons (typ, sty) -> Cons (typ, flatten_sty sty)
-  | Append (_, _) -> (
-    (* let sty1_flattened = flatten_sty sty1 in
-    let sty2_flattened = flatten_sty sty2 in
-    concat_sty *)
-    Nil (* TODO *)
-  )
-  | v -> v
+  | Cons (ty, sty') -> (SITy ty) :: (serialize_sty sty')
+  | Append (sty1, sty2) -> (serialize_sty sty1) @ (serialize_sty sty2)
+  | Nil -> []
+  | StackTypeVar _ -> [SISty sty]
 
 (* Typecheck if two stack types are equal *)
 let typecheck_stack_eq _ (sty1 : stack_ty) (sty2 : stack_ty) =
-  let sty1_flattened = flatten_sty sty1 in
-  let sty2_flattened = flatten_sty sty2 in
-  if not (sty1_flattened = sty2_flattened) then
+  let sty1_serialized = serialize_sty sty1 in
+  let sty2_serialized = serialize_sty sty2 in
+  if not (sty1_serialized = sty2_serialized) then
     type_error ("Can't typeecheck the equality of " ^ (pp_sty sty1) ^ " and " ^ (pp_sty sty2))
   
 (* Typecheck if register assignment ra1 is subtype of ra2, i.e. ra2 is a subset 

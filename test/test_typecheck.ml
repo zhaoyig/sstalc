@@ -29,7 +29,15 @@ let tests = "test suite for typecheck" >::: [
     let fv = free_vars_ty (TypeList [Forall (ta, ra); (Var (TVar "d")); Exist ((TVar "exist_var"), TypeList [(Var (TVar "exist_var")); (Var (TVar "e"))])]) in
     assert_equal fv [TAITVar (TVar "c"); TAITVar (TVar "d"); TAITVar (TVar "e")]
   );
-  "substitution type" >:: (fun _ -> ())
+  "substitution type" >:: (fun _ -> 
+    let tao1 = TypeList [Int; TypeList [Int; Int]] in
+    assert_equal (ty_substitute tao1 Int (TVar "alpha")) (TypeList [(Var (TVar "alpha")); TypeList [(Var (TVar "alpha")); (Var (TVar "alpha"))]])
+  );
+  "serialize" >:: (fun _ -> 
+    let sty = (Int ++ StackTypeVar (STVar "rho1")) @@ (Int ++ (Int ++ Nil)) in
+    let expect = [SITy Int; SISty (StackTypeVar (STVar "rho1")); SITy Int; SITy Int] in
+    assert_equal (serialize_sty sty) expect
+  )
 ]
 
 let _ = run_test_tt_main tests
