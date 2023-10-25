@@ -219,39 +219,42 @@ and reg_asgn_substitute (ra : reg_asgn) (typ : ty) (tv : type_var) =
   let sty_substed = sty_substitute sty typ tv in
   (sty_substed, normal_reg_substed)
 
-(* Same as above but for stack_ty *)
-and reg_asgn_substitute_sty (ra : reg_asgn) (styp : stack_ty) (tv : type_var) =
+(* Same as above but substitute occurences of `styp` (a stack type) *)
+and reg_asgn_substitute_sty (ra : reg_asgn) (styp : stack_ty) (stv : stack_type_var) =
   let (sty, normal_reg) = ra in
   let normal_reg_substed = List.map (fun x -> (
     let (r, t) = x in
-    (r, ty_substitute t typ tv)
+    (r, ty_substitute_sty t styp stv)
   )) normal_reg in
-  let sty_substed = sty_substitute sty typ tv in
+  let sty_substed = (if sty = styp then (StackTypeVar stv) else sty) in
   (sty_substed, normal_reg_substed)
 
 (* Within `t`, replace occurences of `typ` with `tv` *)
 and ty_substitute (t : ty) (typ : ty) (tv : type_var) =
   let rec subst (tao : ty) =
+    if tao = typ then Var tv else
     match tao with
     | TypeList l -> TypeList (List.map (fun x -> subst x) l)
     | Forall (ta, ra) -> Forall (ta, (reg_asgn_substitute ra typ tv))
-    | Exist (alpha, tao) -> Exist (alpha, subst tao)
+    | Exist (alpha, tao) -> Exist ((if (Var alpha = typ) then tv else alpha), subst tao)
     | TPtr sty -> TPtr (sty_substitute sty typ tv)
-    | Int | TTop | Var _ -> if (tao = typ) then Var tv else tao
+    | Int | TTop | Var _ -> tao
   in
   subst t
 
-and ty_substitute_sty (t : ty) (styp : stack_ty) (tv : type_var) =
+(* See above *)
+and ty_substitute_sty (t : ty) (styp : stack_ty) (stv : stack_type_var) =
   let rec subst (tao : ty) =
     match tao with
     | TypeList l -> TypeList (List.map (fun x -> subst x) l)
-    | Forall (ta, ra) -> Forall (ta, (reg_asgn_substitute_sty ra styp tv))
-    | Exist (alpha, tao) -> Exist (alpha, subst tao)
-    | TPtr sty -> TPtr (sty_substitute_sty sty styp tv)
-    | Int | TTop | Var _ -> if (tao = typ) then Var tv else tao
+    | Forall (ta, ra) -> Forall (ta, (reg_asgn_substitute_sty ra styp stv))
+    | Exist (alpha, tao) -> (Exist (alpha, subst tao))
+    | TPtr sty -> TPtr (if sty = styp then (StackTypeVar stv) else sty)
+    | Int | TTop | Var _ -> tao
   in
   subst t
 
+(* See above *)
 and sty_substitute (sty : stack_ty) (typ : ty) (tv : type_var) =
   let rec subst (sigma : stack_ty) = 
     match sigma with
@@ -259,6 +262,18 @@ and sty_substitute (sty : stack_ty) (typ : ty) (tv : type_var) =
     | Cons (tao, sigma') -> Cons (ty_substitute tao typ tv, subst sigma')
     | StackTypeVar _ -> sigma
     | Append (sigma1, sigma2) -> Append (subst sigma1, subst sigma2)
+  in
+  subst sty
+
+(* See above *)
+and sty_substitute_sty (sty : stack_ty) (styp : stack_ty) (stv : stack_type_var) =
+  let rec subst (sigma : stack_ty) =
+    if sigma = styp then StackTypeVar stv else
+    match sigma with
+    | Cons (tao, sigma') -> Cons (tao, subst sigma')
+    | Append(sigma1, sigma2) -> Append (subst sigma1, subst sigma2)
+    | StackTypeVar _ -> sigma
+    | Nil -> Nil
   in
   subst sty
 
@@ -299,13 +314,39 @@ and typeof_word env w =
         (match h with
         | TAITVar _ -> type_error ("The first variable of the type assignment of " ^ (pp_word w)
            ^ " is a type variable, but was expecting a stack type variable") 
-        | TAISTVar tv -> Forall (t, reg_asgn_substitute ra sty tv))))
-    | _ -> type_error ("Expect " ^ (pp_word w) ^ " to have some Forall type, but got " ^ (pp_ty w_type))
+        | TAISTVar tv -> Forall (t, reg_asgn_substitute_sty ra sty tv)))
+    | _ -> type_error ("Expect " ^ (pp_word w) ^ " to have some Forall type, but got " ^ (pp_ty w_type)))
 
 and typeof_operand env op =
   match op with
   | Reg reg -> typeof_reg env reg (* reg *)
   | Word word_val -> typeof_word env word_val 
+  | OperandTyPoly (op, typ) -> 
+    let _ = typecheck_ty env typ in
+    let op_type = typeof_operand env op in
+    (match op_type with
+    | Forall (ta, ra) ->
+      (match ta with
+      | [] -> type_error ("The type assignments of " ^ (pp_op op) ^ " is empty.")
+      | h :: t -> 
+        (match h with
+        | TAISTVar _ -> type_error ("The first variable of the type assignment of " ^ (pp_op op)
+           ^ " is a stack type variable, but was expecting a type variable") 
+        | TAITVar tv -> Forall (t, reg_asgn_substitute ra typ tv)))
+    | _ -> type_error ("Expect " ^ (pp_op op) ^ " to have some Forall type, but got " ^ (pp_ty op_type)))
+  | OperandSTyPoly (op, sty) ->
+    let _ = typecheck_sty env sty in
+    let w_type = typeof_operand env op in
+    (match w_type with
+    | Forall (ta, ra) ->
+      (match ta with
+      | [] -> type_error ("The type assignments of " ^ (pp_op op) ^ " is empty.")
+      | h :: t -> 
+        (match h with
+        | TAITVar _ -> type_error ("The first variable of the type assignment of " ^ (pp_op op)
+            ^ " is a type variable, but was expecting a stack type variable") 
+        | TAISTVar tv -> Forall (t, reg_asgn_substitute_sty ra sty tv)))
+    | _ -> type_error ("Expect " ^ (pp_op op) ^ " to have some Forall type, but got " ^ (pp_ty w_type)))
   | _ -> Int (* TODO *)
 
 and typeof_code (env : static_env) code =

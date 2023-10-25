@@ -41,3 +41,4 @@ TODO:
 - hval
 - stack equality, correctness? (is serialization correct?)
 - ~~forall type free variables?~~
+- substitution, does alpha need to be substituted in Exist alpha tao?
