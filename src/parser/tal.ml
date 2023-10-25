@@ -75,7 +75,8 @@ and word_val =
   | Label of label
   | Immediate of int
   | WordPack of ty * word_val * ty
-(* Omitted polymorphic type instantiation *)
+  | WordTyPoly of word_val * ty (* w[tao] *)
+  | WordSTyPoly of word_val * stack_ty (* w[sigma] *)
   | Ptr of address
   | Ns
 
@@ -83,6 +84,8 @@ and operand =
   | Reg of reg
   | Word of word_val
   | OperandPack of ty * operand * ty
+  | OperandTyPoly of operand * ty
+  | OperandSTyPoly of operand * stack_ty
 
 (* Omitted polymorphic type instantiation *)
 

@@ -209,7 +209,18 @@ and typeof_instruction (env : static_env) ins =
 and typeof_reg env reg =
   lookup_register env reg
 
+(* Within `ra`, substitute occurences of `typ` with `tv` *)
 and reg_asgn_substitute (ra : reg_asgn) (typ : ty) (tv : type_var) =
+  let (sty, normal_reg) = ra in
+  let normal_reg_substed = List.map (fun x -> (
+    let (r, t) = x in
+    (r, ty_substitute t typ tv)
+  )) normal_reg in
+  let sty_substed = sty_substitute sty typ tv in
+  (sty_substed, normal_reg_substed)
+
+(* Same as above but for stack_ty *)
+and reg_asgn_substitute_sty (ra : reg_asgn) (styp : stack_ty) (tv : type_var) =
   let (sty, normal_reg) = ra in
   let normal_reg_substed = List.map (fun x -> (
     let (r, t) = x in
@@ -226,6 +237,17 @@ and ty_substitute (t : ty) (typ : ty) (tv : type_var) =
     | Forall (ta, ra) -> Forall (ta, (reg_asgn_substitute ra typ tv))
     | Exist (alpha, tao) -> Exist (alpha, subst tao)
     | TPtr sty -> TPtr (sty_substitute sty typ tv)
+    | Int | TTop | Var _ -> if (tao = typ) then Var tv else tao
+  in
+  subst t
+
+and ty_substitute_sty (t : ty) (styp : stack_ty) (tv : type_var) =
+  let rec subst (tao : ty) =
+    match tao with
+    | TypeList l -> TypeList (List.map (fun x -> subst x) l)
+    | Forall (ta, ra) -> Forall (ta, (reg_asgn_substitute_sty ra styp tv))
+    | Exist (alpha, tao) -> Exist (alpha, subst tao)
+    | TPtr sty -> TPtr (sty_substitute_sty sty styp tv)
     | Int | TTop | Var _ -> if (tao = typ) then Var tv else tao
   in
   subst t
@@ -248,10 +270,37 @@ and typeof_word env w =
       | LStr s -> lookup_label env s)
   | Immediate _ -> Int (* int *)
   | Ns -> TTop (* ns *)
-  | Ptr _ -> (* ptr *)
+  | Ptr _ -> (* ptr *) (* TODO *)
     TPtr Nil 
   | WordPack (_, _, _) -> (* pack *)
     TTop (* TODO *)
+  (* tapp *)
+  | WordTyPoly (w, typ) -> 
+    let _ = typecheck_ty env typ in
+    let w_type = typeof_word env w in
+    (match w_type with
+    | Forall (ta, ra) ->
+      (match ta with
+      | [] -> type_error ("The type assignments of " ^ (pp_word w) ^ " is empty.")
+      | h :: t -> 
+        (match h with
+        | TAISTVar _ -> type_error ("The first variable of the type assignment of " ^ (pp_word w)
+           ^ " is a stack type variable, but was expecting a type variable") 
+        | TAITVar tv -> Forall (t, reg_asgn_substitute ra typ tv)))
+    | _ -> type_error ("Expect " ^ (pp_word w) ^ " to have some Forall type, but got " ^ (pp_ty w_type)))
+  | WordSTyPoly (w, sty) ->
+    let _ = typecheck_sty env sty in
+    let w_type = typeof_word env w in
+    (match w_type with
+    | Forall (ta, ra) ->
+      (match ta with
+      | [] -> type_error ("The type assignments of " ^ (pp_word w) ^ " is empty.")
+      | h :: t -> 
+        (match h with
+        | TAITVar _ -> type_error ("The first variable of the type assignment of " ^ (pp_word w)
+           ^ " is a type variable, but was expecting a stack type variable") 
+        | TAISTVar tv -> Forall (t, reg_asgn_substitute ra sty tv))))
+    | _ -> type_error ("Expect " ^ (pp_word w) ^ " to have some Forall type, but got " ^ (pp_ty w_type))
 
 and typeof_operand env op =
   match op with

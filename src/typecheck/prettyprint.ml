@@ -32,9 +32,16 @@ let rec pp_ty = function
   | TPtr _ -> "Stack pointer(TODO)"
   | TTop -> "⊤"
 
+let pp_word = function
+  | Immediate i -> string_of_int i
+  | Label l -> (match l with 
+    | LAdr i -> "label: " ^ (match i with | Address i -> (string_of_int i))
+    | LStr s -> "label: " ^ s)
+  | _ -> "TODO"
+
 let pp_op = function
   | Reg r -> pp_reg r
-  | Word _ -> "Word(TODO)"
+  | Word w -> pp_word w
   | _ -> "TODO"
 
 let rec pp_sty = function

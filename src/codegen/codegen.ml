@@ -35,11 +35,15 @@ let rec compileWordVal = function
   | WordPack (_, wordVal, _) -> compileWordVal wordVal
   | Ptr adr -> compileAdress adr
   | Ns -> "0"
+  | WordSTyPoly (w, _) -> compileWordVal w
+  | WordTyPoly (w, _) -> compileWordVal w
 
 let rec compileOperand = function
   | Reg r -> compileReg r
   | Word w -> compileWordVal w
   | OperandPack (_, op, _) -> compileOperand op
+  | OperandSTyPoly (op, _) -> compileOperand op
+  | OperandTyPoly (op, _) -> compileOperand op
 
 let compileAop = function
   | Add -> "add"

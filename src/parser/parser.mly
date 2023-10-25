@@ -175,6 +175,8 @@ word_val:
   | x = IMMEDIATE { Immediate x }
   | WORD_PACK LSB t = ty COMMA w = word_val RSB AS tprime = ty { WordPack (t, w, tprime)}
   | NS { Ns }
+  | word_val LSB ty RSB { WordTyPoly ($1, $3) }
+  | word_val LSB stack_ty RSB { WordSTyPoly ($1, $3) }
 
 reg:
   | EAX { Eax }
@@ -198,4 +200,6 @@ operand:
   | x = reg { Reg x }
   | x = word_val { Word x }
   | OPERAND_PACK LSB t = ty COMMA o = operand RSB AS tprime = ty { OperandPack (t, o, tprime)}
+  | operand LSB ty RSB { OperandTyPoly ($1, $3) }
+  | operand LSB stack_ty RSB { OperandSTyPoly ($1, $3) }
 %%
