@@ -93,7 +93,7 @@ let typecheck_ty env typ =
   let (_, _, env_vars) = env in
   let unbound_free_vars = diff free_vars env_vars in
   if unbound_free_vars <> [] then
-    type_error ("" ^ "is unbound in type " ^ " ") (* TODO *)
+    type_error ((pp_ty_asgn unbound_free_vars) ^ " is unbound in type " ^ (pp_ty typ)) (* TODO *)
 
 (* stype *)
 let rec typecheck_sty env sty =
@@ -101,7 +101,7 @@ let rec typecheck_sty env sty =
   let (_, _, env_vars) = env in
   let unbound_free_vars = diff free_vars env_vars in
   if unbound_free_vars <> [] then
-    type_error ("" ^ "is unbound in type " ^ " ") (* TODO *)
+    type_error ((pp_ty_asgn unbound_free_vars) ^ " is unbound in stack type " ^ (pp_sty sty)) (* TODO *)
 
 (* Iterate through normal registers and typecheck each type *)
 and typecheck_each_ra env l =  
@@ -349,6 +349,7 @@ and typeof_operand env op =
     | _ -> type_error ("Expect " ^ (pp_op op) ^ " to have some Forall type, but got " ^ (pp_ty w_type)))
   | _ -> Int (* TODO *)
 
+(* typecheck code *)
 and typeof_code (env : static_env) code =
   match code with
   | Code (type_assignments, reg_assignments, ins_seq) -> 
@@ -357,10 +358,57 @@ and typeof_code (env : static_env) code =
     let _ = typeof_ins_seq (l, reg_assignments, type_assignments) ins_seq in
     Forall (type_assignments, reg_assignments)
 
+(* Simply get the type annotation of `code`, without checking it *)
+and type_annotation_of_code code =
+  match code with
+  | Code (type_assignments, reg_assignments, _) -> 
+    Forall (type_assignments, reg_assignments)
+
+(* Second pass: typecheck the program *)
+and typecheck_prog env (ast : code_block_seq) =
+  match ast with
+  | CodeBlockSeq cb -> 
+    (match cb with
+    | CodeBlock (_, code) ->
+      let _ = typeof_code env code in
+      ())
+  | CodeBlockSeqCons (cb, cbs) -> 
+    (match cb with
+    | CodeBlock (_, code) ->
+      let _ = typeof_code env code in
+      let _ = typecheck_prog env cbs in
+      ())
+
+(* First pass: store all the type annotation info of labels into environment *)
+and first_pass env (ast : code_block_seq) : static_env =
+  let (l, r, t) = env in
+  match ast with
+  | CodeBlockSeq cb -> 
+    (match cb with
+    | CodeBlock (label, code) ->
+      let label_name = (match label with
+      | LAdr _ -> failwith "encountered constant address while storing type annotations"
+      | LStr s -> s) in
+      let code_annotation = type_annotation_of_code code in
+      let new_env = ((extend_label l label_name code_annotation), r, t) in
+      new_env
+    )
+  | CodeBlockSeqCons (cb, cbs) -> 
+    (match cb with
+    | CodeBlock (label, code) ->
+      let label_name = (match label with
+      | LAdr _ -> failwith "encountered constant address while storing type annotations"
+      | LStr s -> s) in
+      let code_annotation = type_annotation_of_code code in
+      let new_env = ((extend_label l label_name code_annotation), r, t) in
+      first_pass new_env cbs
+    )
+    
 let typecheck intputFile =
   let ast = parseFile intputFile in
   (* Enter from the `instruction_seq` of "_main" *)
-  let main = lookup_code_block ast "_main" in
-  let _ = typeof_code empty_env main in
+  (* let main = lookup_code_block ast "_main" in *)
+  let env = first_pass empty_env ast in
+  let _ = typecheck_prog env ast in
   print_endline "Typechecked" ;
   ast

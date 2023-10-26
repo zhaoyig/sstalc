@@ -159,8 +159,8 @@ ty_asgn:
   | separated_list(COMMA, ty_asgn_item) { $1 }
 
 ty_asgn_item:
-  | STVAR { TAITVar (TVar $1) }
-  | TVAR { TAISTVar (STVar $1) }
+  | STVAR { TAISTVar (STVar $1) }
+  | TVAR { TAITVar (TVar $1) }
 
 reg_asgn:
   | LCB SP COLON st = stack_ty COMMA l = separated_list(COMMA, reg_asgn_item) RCB { (st, l) }

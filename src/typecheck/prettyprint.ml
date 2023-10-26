@@ -45,19 +45,22 @@ let pp_op = function
   | _ -> "TODO"
 
 let rec pp_sty = function
-  | StackTypeVar _ -> "stackVar"
+  | StackTypeVar v -> "stackVar: " ^ (match v with STVar s -> s)
   | Append (st1, st2) -> "(" ^ (pp_sty st1) ^ " @ " ^ (pp_sty st2) ^ ")"
   | Cons (t, st) -> "(" ^ pp_ty t ^ " :: " ^ pp_sty st ^ ")"
   | Nil -> "nil" (* TODO *)
 
 let pp_reg_asgn ra =
   let (stack, normal_reg) = ra in
-  (pp_sty stack)
-    ^ String.concat "," (List.map 
+  (pp_sty stack) ^ ", "
+    ^ String.concat ", " (List.map 
         (fun x -> (let (rr, tt) = x in
          (pp_reg rr) ^ " : " ^ (pp_ty tt) ))
         normal_reg)
   
+let pp_ty_asgn ta =
+  String.concat ", " (List.map (fun x -> (match x with | TAITVar v -> (match v with | TVar s -> ("TVar(" ^ s ^ ")")) | TAISTVar v -> (match v with | STVar s -> ("STVar(" ^ s ^ ")")))) ta)
+
 let pp_env (env) = (* TODO *)
   let (_, r, _) = env in
   let reg_asgn_str = pp_reg_asgn r in

@@ -37,7 +37,10 @@ let tests = "test suite for typecheck" >::: [
     let sty = (Int ++ StackTypeVar (STVar "rho1")) @@ (Int ++ (Int ++ Nil)) in
     let expect = [SITy Int; SISty (StackTypeVar (STVar "rho1")); SITy Int; SITy Int] in
     assert_equal (serialize_sty sty) expect
-  )
+  );
+  "diff" >:: (fun _ ->
+    assert_equal (diff [1] [1]) []
+  ) 
 ]
 
 let _ = run_test_tt_main tests
