@@ -167,8 +167,10 @@ let typecheck_subtype env ra1 ra2 =
 (* seq, jmp, halt *)
 let rec typeof_ins_seq env ins_seq = 
   match ins_seq with
-  | Jmp _ -> (* jmp *)
-      ()
+  | Jmp v -> (* jmp *)
+    let (l, r, t) = env in
+    typec
+    typecheck_subtype 
   | Halt t -> (* halt *)
     let rax_ty = typeof_reg env Rax in
     if (not (rax_ty = t)) then type_error (type_err_expect "rax" t rax_ty)
@@ -376,7 +378,7 @@ and typecheck_prog env (ast : code_block_seq) =
     (match cb with
     | CodeBlock (_, code) ->
       let _ = typeof_code env code in
-      let _ = typecheck_prog env cbs in
+      let _ = typecheck_prog empty_env cbs in
       ())
 
 (* First pass: store all the type annotation info of labels into environment *)
