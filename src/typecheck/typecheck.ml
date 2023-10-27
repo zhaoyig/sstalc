@@ -181,8 +181,8 @@ let rec typeof_ins_seq env ins_seq =
       ()
     | _ -> type_error ("Expect " ^ (pp_op v) ^ " to have some Forall type, but got " ^ (pp_ty operand_type)))
   | Halt t -> (* halt *)
-    let rax_ty = typeof_reg env Rax in
-    if (not (rax_ty = t)) then type_error (type_err_expect "rax" t rax_ty)
+    let rax_ty = typeof_reg env Rdi in
+    if (not (rax_ty = t)) then type_error (type_err_expect "rdi" t rax_ty)
   | InstructionSeq (ins_line, ins_seq) -> (* seq *)
     let ins = (match ins_line with
       | InstructionLine (ins, _) -> ins
@@ -231,7 +231,9 @@ and typeof_instruction (env : static_env) ins =
   (* assumes the list of types can all fit in a word *)
   | Malloc tuple ->
     let _ = typecheck_each_type env tuple in
-    
+    let (l, ra, t) = env in
+    let new_ra = update_register_asgn ra Rax (TypeList tuple) in
+    ((l, new_ra, t), ())
   | _ -> failwith "TODO"
 
 (* reg *)

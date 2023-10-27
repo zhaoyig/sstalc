@@ -1,6 +1,9 @@
 _f:
-    code[$rho]{ sp: $rho, rax: int, rbx: <int, int> }.
+    code[$rho]{ sp: $rho, rax: int, rbx: int }.
         add rax, rbx
+        malloc <int, int, int>
+        ld rbx, rax(2)
+        mov rdi, rbx
         halt int
 _main:
     code[]{ sp: nil }.
