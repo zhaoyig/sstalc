@@ -93,7 +93,7 @@ let typecheck_ty env typ =
   let (_, _, env_vars) = env in
   let unbound_free_vars = diff free_vars env_vars in
   if unbound_free_vars <> [] then
-    type_error ((pp_ty_asgn unbound_free_vars) ^ " is unbound in type " ^ (pp_ty typ)) (* TODO *)
+    type_error ((pp_ty_asgn unbound_free_vars) ^ " is unbound") (* TODO *)
 
 (* stype *)
 let rec typecheck_sty env sty =
@@ -152,11 +152,11 @@ let typecheck_stack_eq _ (sty1 : stack_ty) (sty2 : stack_ty) =
     type_error ("Can't typeecheck the equality of " ^ (pp_sty sty1) ^ " and " ^ (pp_sty sty2))
   
 (* Typecheck if register assignment ra1 is subtype of ra2, i.e. ra2 is a subset 
-   of ra1 *)
+   of ra1, i.e. ra1 <= ra2 *)
 let typecheck_subtype env ra1 ra2 =
   let (st1, normal_reg1) = ra1 in
   let (st2, normal_reg2) = ra2 in
-  if subset_of normal_reg2 normal_reg1 then type_error ((pp_reg_asgn ra1) 
+  if not (subset_of normal_reg2 normal_reg1) then type_error ((pp_reg_asgn ra1) 
     ^ " is not a subtype of " ^ (pp_reg_asgn ra2))
   else
     let _ = typecheck_each_ra env normal_reg1 in
@@ -168,9 +168,13 @@ let typecheck_subtype env ra1 ra2 =
 let rec typeof_ins_seq env ins_seq = 
   match ins_seq with
   | Jmp v -> (* jmp *)
-    let (l, r, t) = env in
-    typec
-    typecheck_subtype 
+    let (_, r, _) = env in
+    let operand_type = typeof_operand env v in
+    (match operand_type with (* Type of v must be a code type *)
+    | Forall (_, ra) ->
+      let _ = typecheck_subtype env r ra in
+      ()
+    | _ -> type_error ("Expect " ^ (pp_op v) ^ " to have some Forall type, but got " ^ (pp_ty operand_type)))
   | Halt t -> (* halt *)
     let rax_ty = typeof_reg env Rax in
     if (not (rax_ty = t)) then type_error (type_err_expect "rax" t rax_ty)
@@ -211,7 +215,7 @@ and typeof_instruction (env : static_env) ins =
 and typeof_reg env reg =
   lookup_register env reg
 
-(* Within `ra`, substitute occurences of `typ` with `tv` *)
+(* Within `ra`, rewrite occurences of `tv` into `typ` *)
 and reg_asgn_substitute (ra : reg_asgn) (typ : ty) (tv : type_var) =
   let (sty, normal_reg) = ra in
   let normal_reg_substed = List.map (fun x -> (
@@ -221,42 +225,43 @@ and reg_asgn_substitute (ra : reg_asgn) (typ : ty) (tv : type_var) =
   let sty_substed = sty_substitute sty typ tv in
   (sty_substed, normal_reg_substed)
 
-(* Same as above but substitute occurences of `styp` (a stack type) *)
+(* Within `ra`, rewrite occurences of `stv` into `styp` *)
 and reg_asgn_substitute_sty (ra : reg_asgn) (styp : stack_ty) (stv : stack_type_var) =
   let (sty, normal_reg) = ra in
   let normal_reg_substed = List.map (fun x -> (
     let (r, t) = x in
     (r, ty_substitute_sty t styp stv)
   )) normal_reg in
-  let sty_substed = (if sty = styp then (StackTypeVar stv) else sty) in
+  let sty_substed = sty_substitute_sty sty styp stv in
   (sty_substed, normal_reg_substed)
 
-(* Within `t`, replace occurences of `typ` with `tv` *)
+(* Within `t`, rewrite occurences of `tv` into `typ` *)
 and ty_substitute (t : ty) (typ : ty) (tv : type_var) =
   let rec subst (tao : ty) =
     if tao = typ then Var tv else
     match tao with
     | TypeList l -> TypeList (List.map (fun x -> subst x) l)
-    | Forall (ta, ra) -> Forall (ta, (reg_asgn_substitute ra typ tv))
-    | Exist (alpha, tao) -> Exist ((if (Var alpha = typ) then tv else alpha), subst tao)
+    | Forall (ta, ra) -> Forall (ta, (reg_asgn_substitute ra typ tv)) (* TODO: Avoid capture *)
+    | Exist (alpha, tao) -> Exist (alpha, subst tao) (* TODO: Avoid capture *)
     | TPtr sty -> TPtr (sty_substitute sty typ tv)
-    | Int | TTop | Var _ -> tao
+    | Int | TTop -> tao
+    | Var v -> if v = tv then typ else tao
   in
   subst t
 
-(* See above *)
+(* Within `t`, rewrite occurences of `stv` into `styp` *)
 and ty_substitute_sty (t : ty) (styp : stack_ty) (stv : stack_type_var) =
   let rec subst (tao : ty) =
     match tao with
     | TypeList l -> TypeList (List.map (fun x -> subst x) l)
     | Forall (ta, ra) -> Forall (ta, (reg_asgn_substitute_sty ra styp stv))
     | Exist (alpha, tao) -> (Exist (alpha, subst tao))
-    | TPtr sty -> TPtr (if sty = styp then (StackTypeVar stv) else sty)
+    | TPtr sty -> TPtr (sty_substitute_sty sty styp stv)
     | Int | TTop | Var _ -> tao
   in
   subst t
 
-(* See above *)
+(* Within sty, rewrite occurences of `tv` into `typ` *)
 and sty_substitute (sty : stack_ty) (typ : ty) (tv : type_var) =
   let rec subst (sigma : stack_ty) = 
     match sigma with
@@ -267,14 +272,14 @@ and sty_substitute (sty : stack_ty) (typ : ty) (tv : type_var) =
   in
   subst sty
 
-(* See above *)
+(* Within sty, rewrite occurences of `stv` into `styp` *)
 and sty_substitute_sty (sty : stack_ty) (styp : stack_ty) (stv : stack_type_var) =
   let rec subst (sigma : stack_ty) =
     if sigma = styp then StackTypeVar stv else
     match sigma with
     | Cons (tao, sigma') -> Cons (tao, subst sigma')
     | Append(sigma1, sigma2) -> Append (subst sigma1, subst sigma2)
-    | StackTypeVar _ -> sigma
+    | StackTypeVar stv' -> if stv' = stv then styp else sigma
     | Nil -> Nil
   in
   subst sty
@@ -378,7 +383,8 @@ and typecheck_prog env (ast : code_block_seq) =
     (match cb with
     | CodeBlock (_, code) ->
       let _ = typeof_code env code in
-      let _ = typecheck_prog empty_env cbs in
+      let next_env = (get_1 env, (Nil, []), []) in (* the environment for typechecking next label is empty except the label assignments *)
+      let _ = typecheck_prog next_env cbs in
       ())
 
 (* First pass: store all the type annotation info of labels into environment *)
@@ -411,6 +417,8 @@ let typecheck intputFile =
   (* Enter from the `instruction_seq` of "_main" *)
   (* let main = lookup_code_block ast "_main" in *)
   let env = first_pass empty_env ast in
+  print_endline "========";
+  print_endline (pp_env env);
   let _ = typecheck_prog env ast in
   print_endline "Typechecked" ;
   ast

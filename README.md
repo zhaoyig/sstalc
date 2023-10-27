@@ -19,7 +19,8 @@ dune runtest
 ```
 
 ## Note:
-`malloc` will overwrite `rax`
+- `malloc` will overwrite `rax`
+- substituion is not capture avoiding, name your type variables carefully
 
 ## Typing rule:
 Entry is a code_block_seq
@@ -41,4 +42,4 @@ TODO:
 - hval
 - stack equality, correctness? (is serialization correct?)
 - ~~forall type free variables?~~
-- substitution, does alpha need to be substituted in Exist alpha tao?
+- avoid captures

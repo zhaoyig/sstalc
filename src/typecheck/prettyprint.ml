@@ -61,7 +61,10 @@ let pp_reg_asgn ra =
 let pp_ty_asgn ta =
   String.concat ", " (List.map (fun x -> (match x with | TAITVar v -> (match v with | TVar s -> ("TVar(" ^ s ^ ")")) | TAISTVar v -> (match v with | STVar s -> ("STVar(" ^ s ^ ")")))) ta)
 
+let pp_label_asgn la =
+  String.concat ", " (List.map (fun x -> let (n, t) = x in (n ^ ": " ^ (pp_ty t))) la)
+
 let pp_env (env) = (* TODO *)
-  let (_, r, _) = env in
+  let (l, r, _) = env in
   let reg_asgn_str = pp_reg_asgn r in
-  Printf.sprintf "H: %s | R: %s | TypeVar: %s" "TODO" reg_asgn_str "TODO"
+  Printf.sprintf "H: %s | R: %s | TypeVar: %s" (pp_label_asgn l) reg_asgn_str "TODO"

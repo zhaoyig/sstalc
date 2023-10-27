@@ -17,3 +17,10 @@ let rec update_assoc_list k v l =
     let (kk, _) = h in
     if kk == k then (kk, v) :: update_assoc_list k v t
     else h :: update_assoc_list k v t
+
+(* get the first element in a three tuple *)
+let get_1 (a,_,_) = a
+
+let get_2 (_,a,_) = a
+
+let get_3 (_,_,a) = a

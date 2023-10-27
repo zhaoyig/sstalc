@@ -1,5 +1,5 @@
 _f:
-    code[$rho]{ sp: $rho, rax: int, rbx: int }.
+    code[$rho]{ sp: $rho, rax: int, rbx: lalal }.
         add rax, rbx
         halt int
 _main:
@@ -7,4 +7,5 @@ _main:
         mov rax, $2
         mov rbx, $5
         add rax, rbx
-        jmp _f[int :: $rho][lolol]
+        mov rcx, $6
+        jmp _f[nil]
