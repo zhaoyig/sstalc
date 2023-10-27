@@ -164,6 +164,11 @@ let typecheck_subtype env ra1 ra2 =
     let _ = typecheck_stack_eq env st1 st2 in
     ()
 
+(* typecheck each type in a type list `l` *)
+let typecheck_each_type env l =
+  let _ = List.map (fun x -> typecheck_ty env x) l in
+  ()
+
 (* seq, jmp, halt *)
 let rec typeof_ins_seq env ins_seq = 
   match ins_seq with
@@ -209,6 +214,24 @@ and typeof_instruction (env : static_env) ins =
           type_error (type_err_expect (pp_op op) Int op_ty)
         else 
             (env, ())
+  | Ld (rd, rs, i) -> 
+    let rs_type = typeof_reg env rs in
+    (match rs_type with
+    | TypeList l -> 
+      let n = List.length l in
+      if (1 <= i && i <= n) then
+        let taoi = List.nth l i in
+        let (l, ra, t) = env in
+        let new_ra = update_register_asgn ra rd taoi in
+        ((l, new_ra, t), ())
+      else
+        type_error ("offset in " ^ (pp_instruction ins) ^ " is invalid because the tuple only has length " ^ (string_of_int n))
+    | _ -> type_error ("expect " ^ (pp_reg rs) ^ " to have type Tuple but got " ^ (pp_ty rs_type)))
+  (* malloc *)
+  (* assumes the list of types can all fit in a word *)
+  | Malloc tuple ->
+    let _ = typecheck_each_type env tuple in
+    
   | _ -> failwith "TODO"
 
 (* reg *)

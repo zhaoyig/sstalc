@@ -1,5 +1,5 @@
 _f:
-    code[$rho]{ sp: $rho, rax: int, rbx: lalal }.
+    code[$rho]{ sp: $rho, rax: int, rbx: <int, int> }.
         add rax, rbx
         halt int
 _main:
