@@ -40,7 +40,11 @@ let tests = "test suite for typecheck" >::: [
   );
   "diff" >:: (fun _ ->
     assert_equal (diff [1] [1]) []
-  ) 
+  );
+  "insert into stack" >:: (fun _ ->
+    let sigma = TTop ++ (TTop ++ Nil) in
+    assert_equal (deserialize_sty (insert_ty_to_sit Int (serialize_sty sigma) 1)) (Int ++ (TTop ++ Nil))
+  )
 ]
 
 let _ = run_test_tt_main tests

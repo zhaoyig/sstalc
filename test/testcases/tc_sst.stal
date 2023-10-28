@@ -1,0 +1,9 @@
+_main:
+    code[]{ sp: nil }.
+        mov rax, $42
+        salloc 4
+        sfree 2
+        sst sp(-1), rax
+        sst sp(-2), rax
+        mov rdi, $1
+        halt int

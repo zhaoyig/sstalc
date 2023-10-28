@@ -19,11 +19,40 @@ let pp_reg = function
   | Rbp -> "rbp"
   | Rsp -> "rsp"
 
-let pp_instruction = function
-  | Mov (reg, op) -> formatInstruction "mov" [pp_reg reg; compileOperand op]
-  | _ -> ""
+let rec pp_instruction = function
+  | Aop (_, reg, op') ->
+    formatInstruction "aop" [pp_reg reg; compileOperand op']
+  | Mov (reg, op) ->
+    formatInstruction "mov" [pp_reg reg; compileOperand op]
+  | Ld (reg1, reg2, offset) ->
+    formatInstruction "ld" [pp_reg reg1; pp_reg reg2; string_of_int offset]
+  | St (reg1, reg2, offset) ->
+    formatInstruction "st" [pp_reg reg1; pp_reg reg2; string_of_int offset]
+  | Bop (_, reg, op') ->
+    formatInstruction "bop" [pp_reg reg; compileOperand op']
+  | Malloc tys ->
+    formatInstruction "malloc" (List.map (fun x -> pp_ty x) tys)
+  | Unpack (type_var, reg, op) ->
+    formatInstruction "unpack" [pp_ty (Var type_var); pp_reg reg; compileOperand op]
+  | Salloc n ->
+    formatInstruction "salloc" [string_of_int n]
+  | Sfree n ->
+    formatInstruction "sfree" [string_of_int n]
+  | Movsp1 (_, reg) ->
+    formatInstruction "mov" ["sp"; pp_reg reg]
+  | Movsp2 (reg, _) ->
+    formatInstruction "mov" [pp_reg reg; "sp"]
+  | Sst (reg1, reg2, offset) ->
+    formatInstruction "sst" [pp_reg reg1; pp_reg reg2; string_of_int offset]
+  | Sld (reg1, reg2, offset) ->
+    formatInstruction "sld" [pp_reg reg1; pp_reg reg2; string_of_int offset]
+  | Sstsp (_, reg, offset) ->
+    formatInstruction "sst" ["sp"; pp_reg reg; string_of_int offset]
+  | Sldsp (reg, _, offset) ->
+    formatInstruction "sld" [pp_reg reg; "sp"; string_of_int offset]
+  | Nop -> ""
 
-let rec pp_ty = function
+and pp_ty = function
   | Int -> "Int"
   | TypeList l -> "<" ^ String.concat "," (List.map pp_ty l) ^ ">"
   | Forall (_, _) -> "Forall(TODO)"

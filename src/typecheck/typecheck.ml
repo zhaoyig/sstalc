@@ -7,13 +7,14 @@ exception TypeError of string
 let type_error s = 
   raise (TypeError s)
 
-(* Return a string about a type mismatch error *)
-let type_err_expect str expected_ty actual_ty =
-  Printf.sprintf "Expect %s to have type %s, but got %s\n" str (pp_ty expected_ty) (pp_ty actual_ty)
-
 type static_env = label_asgn * reg_asgn * ty_asgn
 
 let empty_env = ([], (Nil, []), [])
+
+(****************************** Helper functions ******************************)
+(* Return a string about a type mismatch error *)
+let type_err_expect str expected_ty actual_ty =
+  Printf.sprintf "Expect %s to have type %s, but got %s\n" str (pp_ty expected_ty) (pp_ty actual_ty)
 
 let get_str_of_label = function
   | LAdr _ -> failwith "Invalid label"
@@ -87,6 +88,77 @@ and free_vars_ty (typ : ty) =
   | TPtr sty -> free_vars_sty sty
   | TTop -> []
 
+(* To make life easy *)
+let (@@) sty1 sty2 = Append (sty1, sty2)
+let (++) ty sty = Cons (ty, sty)
+
+(* used to extract the items in a stack *)
+type stack_item =
+  | SITy of ty
+  | SISty of stack_ty
+
+(* Serialize a stack_ty into a list of stack_item (either stack type variable or ty) *)
+let rec serialize_sty sty = 
+  match sty with
+  | Cons (ty, sty') -> (SITy ty) :: (serialize_sty sty')
+  | Append (sty1, sty2) -> (serialize_sty sty1) @ (serialize_sty sty2)
+  | Nil -> []
+  | StackTypeVar _ -> [SISty sty]
+
+(*  *)
+let rec strip_n_types l n =
+  if n = 0 then l else
+  match l with
+  | [] -> failwith "cannot sfree because stack does not have enough items to free."
+  | h :: t -> (match h with
+    | SITy _ -> strip_n_types t (n - 1)
+    | SISty _ -> failwith "cannot sfree because stack does not have enough items to free.")
+
+    (* if List.length acc >= n then (acc, sigma) else
+  match sigma with
+  | Cons (tao, sigma') ->
+    serialize_first_n sigma' (tao :: acc) n
+  | Append (sigma1, sigma2) ->
+    let (l1, _) = serialize_first_n sigma1 acc n in
+    let l2 = serialize_first_n sigma2 l1 n in
+    l2
+  | Nil -> ([], sigma)
+  | StackTypeVar _ -> ([], sigma) *)
+
+(* sit means stack item list, this insert also erases the item in there originally *)
+let rec insert_ty_to_sit ty sit i = 
+  if i = 1 then
+    (match sit with
+    | [] -> failwith "cannot sst because stack is not big enough"
+    | _ :: t -> (SITy ty) :: t)
+  else
+  match sit with
+  | [] -> failwith "cannot sst because stack is not big enough"
+  | h :: t -> h :: (insert_ty_to_sit ty t (i - 1))
+
+
+let rec deserialize_sty l =
+  match l with
+  | h :: t ->
+    (match h with
+    | SITy tao -> Cons (tao, deserialize_sty t)
+    | SISty rho -> 
+      (match t with
+      | _ :: _ -> Append (rho, deserialize_sty t)
+      | [] -> rho))
+  | [] -> Nil
+
+let update_sp env sp' = 
+  let (l, r, t) = env in
+  let (_, normal_reg) = r in
+  (l, (sp', normal_reg), t)
+
+let get_stack_type env =
+  let (_, r, _) = env in
+  let (sp, _) = r in
+  sp
+
+(******************************** Typing rules ********************************)
 (* type *)
 let typecheck_ty env typ =
   let free_vars = free_vars_ty typ in
@@ -127,22 +199,6 @@ let rec subset_of ra2 ra1 =
     (match List.find_opt (fun x -> x = h) ra1 with
     | Some _ -> true && (subset_of t ra1)
     | None -> false)
-
-(* To make life easy *)
-let (@@) sty1 sty2 = Append (sty1, sty2)
-let (++) ty sty = Cons (ty, sty)
-
-type stack_item =
-  | SITy of ty
-  | SISty of stack_ty
-
-(* Serialize a stack_ty into a list of stack_item (either stack type variable or ty) *)
-let rec serialize_sty sty = 
-  match sty with
-  | Cons (ty, sty') -> (SITy ty) :: (serialize_sty sty')
-  | Append (sty1, sty2) -> (serialize_sty sty1) @ (serialize_sty sty2)
-  | Nil -> []
-  | StackTypeVar _ -> [SISty sty]
 
 (* Typecheck if two stack types are equal *)
 let typecheck_stack_eq _ (sty1 : stack_ty) (sty2 : stack_ty) =
@@ -193,13 +249,16 @@ let rec typeof_ins_seq env ins_seq =
 and typeof_instruction (env : static_env) ins =
   print_endline ("typechecking: " ^ pp_instruction ins);
   print_endline ("current env " ^ pp_env env);
+  print_endline ("-------------------------typecheck-------------------------");
   match ins with
-  | Mov (reg, op) -> (* mov *)
+  (* mov *)
+  | Mov (reg, op) -> 
     let (l, r, t) = env in
     let op_type = typeof_operand env op in
     let new_env = (l, update_register_asgn r reg op_type, t) in
     (new_env, ())
-  | Aop (_, r, op) -> (* aop *)
+  (* aop *)
+  | Aop (_, r, op) -> 
     let r_ty = typeof_reg env r in
     let op_ty = typeof_operand env op in
     let r_typecheck = (r_ty = Int) in
@@ -214,6 +273,7 @@ and typeof_instruction (env : static_env) ins =
           type_error (type_err_expect (pp_op op) Int op_ty)
         else 
             (env, ())
+  (* ld *)
   | Ld (rd, rs, i) -> 
     let rs_type = typeof_reg env rs in
     (match rs_type with
@@ -234,6 +294,43 @@ and typeof_instruction (env : static_env) ins =
     let (l, ra, t) = env in
     let new_ra = update_register_asgn ra Rax (TypeList tuple) in
     ((l, new_ra, t), ())
+  (* bop *)
+  | Bop (_, reg, op) ->
+    let reg_type = typeof_reg env reg in
+    if reg_type <> Int then type_error (type_err_expect (pp_reg reg) Int reg_type)
+    else
+    let (_, ra1, _) = env in
+    let operand_type = typeof_operand env op in
+    (match operand_type with (* Type of op must be a code type *)
+    | Forall (_, ra2) ->
+      let _ = typecheck_subtype env ra1 ra2 in
+      (env, ())
+    | _ -> type_error ("Expect " ^ (pp_op op) ^ " to have some Forall type, but got " ^ (pp_ty operand_type)))
+  (* salloc *)
+  | Salloc n ->
+    let (l, ra, t) = env in
+    let (sigma, normal_reg) = ra in
+    let rec prepend_n_tops n new_simga = (* prepend n top types to sigma *)
+      if n = 0 then new_simga
+      else
+        Cons (TTop, prepend_n_tops (n - 1) new_simga)
+    in
+    let sigma' = prepend_n_tops n sigma in
+    let new_ra = (sigma', normal_reg) in
+    ((l, new_ra, t),())
+  (* sfree *)
+  | Sfree n ->
+    let sigma1 = get_stack_type env in
+    let sigma2 = deserialize_sty (strip_n_types (serialize_sty sigma1) n) in
+    let new_env = update_sp env sigma2 in
+    (new_env, ())
+  (* sst1 *)
+  | Sstsp (_, rs, i) ->
+    if i > 0 then failwith "Encountered positive offset for sst" else
+    let rs_type = typeof_reg env rs in
+    let sigma1 = get_stack_type env in
+    let sigma1' = deserialize_sty (insert_ty_to_sit rs_type (serialize_sty sigma1) ((Int.abs i))) in
+    (update_sp env sigma1', ())
   | _ -> failwith "TODO"
 
 (* reg *)
