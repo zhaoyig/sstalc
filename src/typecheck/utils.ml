@@ -15,7 +15,7 @@ let rec update_assoc_list k v l =
   | [] -> [(k, v)]
   | h :: t -> 
     let (kk, _) = h in
-    if kk == k then (kk, v) :: update_assoc_list k v t
+    if kk = k then (kk, v) :: t
     else h :: update_assoc_list k v t
 
 (* get the first element in a three tuple *)

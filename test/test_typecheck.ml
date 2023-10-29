@@ -43,7 +43,7 @@ let tests = "test suite for typecheck" >::: [
   );
   "insert into stack" >:: (fun _ ->
     let sigma = TTop ++ (TTop ++ Nil) in
-    assert_equal (deserialize_sty (insert_ty_to_sit Int (serialize_sty sigma) 1)) (Int ++ (TTop ++ Nil))
+    assert_equal (deserialize_sty (insert_ty_to_sit Int (serialize_sty sigma) 0)) (Int ++ (TTop ++ Nil))
   )
 ]
 

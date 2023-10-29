@@ -3,6 +3,7 @@ open TalParser.Tal
 open Prettyprint
 open Utils
 exception TypeError of string
+exception StackTypeError of string
 
 let type_error s = 
   raise (TypeError s)
@@ -127,7 +128,7 @@ let rec strip_n_types l n =
 
 (* sit means stack item list, this insert also erases the item in there originally *)
 let rec insert_ty_to_sit ty sit i = 
-  if i = 1 then
+  if i = 0 then
     (match sit with
     | [] -> failwith "cannot sst because stack is not big enough"
     | _ :: t -> (SITy ty) :: t)
@@ -158,8 +159,31 @@ let get_stack_type env =
   let (sp, _) = r in
   sp
 
-(******************************** Typing rules ********************************)
-(* type *)
+(* when sigma1 = sigma2 @ sigma3, this function finds out sigma2. If it doesn't exist then throw error *)
+let rec head_of_sit sit1 sit3 acc = 
+  if sit1 = sit3 then acc else
+  match sit1 with
+  | [] -> raise (StackTypeError "")
+  | h :: t -> head_of_sit t sit3 (acc @ [h])
+
+(* takes an env and return new env *)
+let update_register env reg typ =
+  let (l, r, t) = env in
+  let r' = update_register_asgn r reg typ in
+  (l, r', t)
+
+(* get the ith type in a stack item list, raise type error if theres a stack variable in the first i item *)
+let rec get_ith_type (l : stack_item list) i =
+  match l with
+  | [] -> type_error "stack is not big enough"
+  | h :: t -> (match h with
+    | SITy tao -> 
+      if i = 0 then tao
+      else get_ith_type t (i - 1)
+    | SISty _ ->
+      type_error "encountered stack variable in stack while getting a type from it"
+  )
+
 let typecheck_ty env typ =
   let free_vars = free_vars_ty typ in
   let (_, _, env_vars) = env in
@@ -212,8 +236,11 @@ let typecheck_stack_eq _ (sty1 : stack_ty) (sty2 : stack_ty) =
 let typecheck_subtype env ra1 ra2 =
   let (st1, normal_reg1) = ra1 in
   let (st2, normal_reg2) = ra2 in
-  if not (subset_of normal_reg2 normal_reg1) then type_error ((pp_reg_asgn ra1) 
-    ^ " is not a subtype of " ^ (pp_reg_asgn ra2))
+  if not (subset_of normal_reg2 normal_reg1) then
+    (
+    print_endline ("ra1: " ^ (pp_reg_asgn ra1));
+    print_endline ("ra2: " ^ (pp_reg_asgn ra2));
+    type_error (" is not a subtype of (normal registers)"))
   else
     let _ = typecheck_each_ra env normal_reg1 in
     let _ = typecheck_each_ra env normal_reg2 in
@@ -326,11 +353,42 @@ and typeof_instruction (env : static_env) ins =
     (new_env, ())
   (* sst1 *)
   | Sstsp (_, rs, i) ->
-    if i > 0 then failwith "Encountered positive offset for sst" else
+    if i < 0 then failwith "Encountered negative offset for sst" else
     let rs_type = typeof_reg env rs in
     let sigma1 = get_stack_type env in
     let sigma1' = deserialize_sty (insert_ty_to_sit rs_type (serialize_sty sigma1) ((Int.abs i))) in
     (update_sp env sigma1', ())
+  (* sst2 *)
+  | Sst (rd, rs, i) ->
+    let rd_type = typeof_reg env rd in
+    (match rd_type with
+    | TPtr sigma3 ->
+      let rs_type = typeof_reg env rs in
+      let sigma1 = get_stack_type env in
+      let sigma2 = deserialize_sty (head_of_sit (serialize_sty sigma1) (serialize_sty sigma3) []) in
+      let sigma5 = deserialize_sty (insert_ty_to_sit rs_type (serialize_sty sigma3) ((Int.abs i))) in
+      let env' = update_sp env (Append (sigma2, sigma5)) in
+      let env'' = update_register env' rd (TPtr sigma5) in
+      (env'', ())
+    | _ -> type_error ("expect " ^ (pp_reg rd) ^ "to have some ptr type but got " ^ (pp_ty rd_type)))
+  (* get-sp *)
+  | Movsp2 (rd, _) ->
+    let sigma = get_stack_type env in
+    (update_register env rd (TPtr sigma), ())
+  (* set-sp *)
+  | Movsp1 (_, rs) ->
+    let rs_type = typeof_reg env rs in
+    let sigma1 = get_stack_type env in
+    (match rs_type with
+    | TPtr sigma2 -> 
+      let _ = head_of_sit (serialize_sty sigma1) (serialize_sty sigma2) [] in (* this is sigma3 *)
+      (update_sp env sigma2, ())
+    | _ -> type_error ("expect " ^ (pp_reg rs) ^ "to have some ptr type but got " ^ (pp_ty rs_type)))
+  (* sld1 *)
+  | Sldsp (rd, _, i) ->
+    let sigma1 = get_stack_type env in
+    let taoi = get_ith_type (serialize_sty sigma1) i in
+    (update_register env rd taoi, ())
   | _ -> failwith "TODO"
 
 (* reg *)

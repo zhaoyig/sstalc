@@ -55,45 +55,46 @@ let rec pp_instruction = function
 and pp_ty = function
   | Int -> "Int"
   | TypeList l -> "<" ^ String.concat "," (List.map pp_ty l) ^ ">"
-  | Forall (_, _) -> "Forall(TODO)"
+  | Forall (ta, ra) -> 
+    Printf.sprintf "∀[%s].(%s)" (pp_ty_asgn ta) (pp_reg_asgn ra)
   | Exist (_, _) -> "Exist(TODO)"
   | Var _ -> "Type Var(TODO)"
   | TPtr _ -> "Stack pointer(TODO)"
   | TTop -> "⊤"
 
-let pp_word = function
+and pp_word = function
   | Immediate i -> string_of_int i
   | Label l -> (match l with 
     | LAdr i -> "label: " ^ (match i with | Address i -> (string_of_int i))
     | LStr s -> "label: " ^ s)
   | _ -> "TODO"
 
-let pp_op = function
+and pp_op = function
   | Reg r -> pp_reg r
   | Word w -> pp_word w
   | _ -> "TODO"
 
-let rec pp_sty = function
-  | StackTypeVar v -> "stackVar: " ^ (match v with STVar s -> s)
+and pp_sty = function
+  | StackTypeVar v -> (match v with STVar s -> s)
   | Append (st1, st2) -> "(" ^ (pp_sty st1) ^ " @ " ^ (pp_sty st2) ^ ")"
   | Cons (t, st) -> "(" ^ pp_ty t ^ " :: " ^ pp_sty st ^ ")"
   | Nil -> "nil" (* TODO *)
 
-let pp_reg_asgn ra =
+and pp_reg_asgn ra =
   let (stack, normal_reg) = ra in
-  (pp_sty stack) ^ ", "
+  (pp_sty stack) ^ " / "
     ^ String.concat ", " (List.map 
         (fun x -> (let (rr, tt) = x in
          (pp_reg rr) ^ " : " ^ (pp_ty tt) ))
         normal_reg)
   
-let pp_ty_asgn ta =
-  String.concat ", " (List.map (fun x -> (match x with | TAITVar v -> (match v with | TVar s -> ("TVar(" ^ s ^ ")")) | TAISTVar v -> (match v with | STVar s -> ("STVar(" ^ s ^ ")")))) ta)
+and pp_ty_asgn ta =
+  String.concat ", " (List.map (fun x -> (match x with | TAITVar v -> (match v with | TVar s -> ("TVar(" ^ s ^ ")")) | TAISTVar v -> (match v with | STVar s -> (s)))) ta)
 
 let pp_label_asgn la =
   String.concat ", " (List.map (fun x -> let (n, t) = x in (n ^ ": " ^ (pp_ty t))) la)
 
 let pp_env (env) = (* TODO *)
-  let (l, r, _) = env in
+  let (_, r, _) = env in
   let reg_asgn_str = pp_reg_asgn r in
-  Printf.sprintf "H: %s | R: %s | TypeVar: %s" (pp_label_asgn l) reg_asgn_str "TODO"
+  Printf.sprintf "R: %s | TypeVar: %s" reg_asgn_str "TODO"

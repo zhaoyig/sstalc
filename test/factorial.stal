@@ -1,23 +1,23 @@
 _fact:
-    code[$p]{ sp: $p, rbx: <>, rcx: int, rax: taop }.
+    code[$p]{ sp: $p, rbx: <>, rcx: int, rax: Forall[].{sp : $p, rbx : int} }.
         bneq rcx, _nonzero
         mov rbx, $1
         jmp rax
 _nonzero:
-    code[$p]{ sp: $p, rbx: <>, rcx: int, rax: taop }.
+    code[$p]{ sp: $p, rbx: <>, rcx: int, rax: Forall[].{sp : $p, rbx : int} }.
         sub rcx, $1
         mov rdx, rcx
         add rcx, $1
         salloc 2
         sst sp(0), rcx
-        sst sp(-1), rax
+        sst sp(1), rax
         mov rcx, rdx
-        mov rax, _cont
-        jmp _fact
+        mov rax, _cont[$p]
+        jmp _fact[int :: Forall[].{sp : $p, rbx : int} :: $p]
 _cont:
-    code[$p]{ sp: int::taop::$p, rbx: int }.
+    code[$p]{ sp: int:: Forall[].{sp : $p, rbx : int} ::$p, rbx: int }.
         sld rcx, sp(0)
-        sld rax, sp(-1)
+        sld rax, sp(1)
         sfree 2
         mul rbx, rcx
         jmp rax
@@ -28,6 +28,7 @@ _halt:
 _main:
     code[]{ sp: nil }.
         malloc <>
-        mov rcx, $5
+        mov rbx, rax
+        mov rcx, $4
         mov rax, _halt
-        jmp _fact
+        jmp _fact[nil]

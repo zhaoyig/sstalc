@@ -85,7 +85,7 @@ open Stdlib
 %token <string> SINGLE_LINE_COMMENT
 
 %left APPEND
-%left CONS (* Should it be left assoc? *)
+%right CONS
 %start <Tal.code_block_seq> prog
 %%
 
@@ -200,6 +200,6 @@ operand:
   | x = reg { Reg x }
   | x = word_val { Word x }
   | OPERAND_PACK LSB t = ty COMMA o = operand RSB AS tprime = ty { OperandPack (t, o, tprime)}
-  | operand LSB ty RSB { OperandTyPoly ($1, $3) }
-  | operand LSB stack_ty RSB { OperandSTyPoly ($1, $3) }
+  | operand LPAREN ty RPAREN { OperandTyPoly ($1, $3) }
+  | operand LPAREN stack_ty RPAREN { OperandSTyPoly ($1, $3) }
 %%
