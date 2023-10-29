@@ -44,6 +44,18 @@ let tests = "test suite for typecheck" >::: [
   "insert into stack" >:: (fun _ ->
     let sigma = TTop ++ (TTop ++ Nil) in
     assert_equal (deserialize_sty (insert_ty_to_sit Int (serialize_sty sigma) 0)) (Int ++ (TTop ++ Nil))
+  );
+  "head_of_sit" >:: (fun _ ->
+    (* when sigma1 = sigma2 @ sigma3, this function finds out sigma2. If it doesn't exist then throw error *)
+    let l1 = [1;2;3;4;5] in
+    let l3 = [3;4;5] in
+    assert_equal (head_of_sit l1 l3 []) [1;2];
+    let a = [2;3;4] in
+    assert_raises (StackTypeError "") (fun () -> (head_of_sit l1 a []));
+    let b = [5;6] in
+    assert_raises (StackTypeError "") (fun () -> (head_of_sit l1 b []));
+    let c = [5] in
+    assert_equal (head_of_sit l1 c []) [1;2;3;4];
   )
 ]
 

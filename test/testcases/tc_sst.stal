@@ -3,7 +3,7 @@ _main:
         mov rax, $42
         salloc 4
         sst sp(0), rax
-        sst sp(-1), rax
+        sst sp(1), rax
         sfree 2
         salloc 6
         mov rdi, $1

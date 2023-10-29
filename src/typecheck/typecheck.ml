@@ -224,6 +224,15 @@ let rec subset_of ra2 ra1 =
     | Some _ -> true && (subset_of t ra1)
     | None -> false)
 
+(* add tv to typing variables, raise type error if its a duplicate *)
+let update_ty_asgn (env : static_env) tv =
+  let (l, r, ta) = env in
+  if (List.mem (TAITVar tv) ta) then 
+    type_error "duplicate type variable"
+  else
+    (l, r, ta)
+
+(******************************** Typing rules ********************************)
 (* Typecheck if two stack types are equal *)
 let typecheck_stack_eq _ (sty1 : stack_ty) (sty2 : stack_ty) =
   let sty1_serialized = serialize_sty sty1 in
@@ -389,7 +398,43 @@ and typeof_instruction (env : static_env) ins =
     let sigma1 = get_stack_type env in
     let taoi = get_ith_type (serialize_sty sigma1) i in
     (update_register env rd taoi, ())
-  | _ -> failwith "TODO"
+  (* sld2 *)
+  | Sld (rd, rs, i) ->
+    let rs_type = typeof_reg env rs in
+    let sigma1 = get_stack_type env in
+    (match rs_type with
+    | TPtr sigma3 ->
+      let _ = deserialize_sty (head_of_sit (serialize_sty sigma1) (serialize_sty sigma3) []) in
+      let taoi = get_ith_type (serialize_sty sigma3) i in
+      (update_register env rd taoi, ())
+    | _ -> type_error ("expect " ^ (pp_reg rs) ^ "to have some ptr type but got " ^ (pp_ty rs_type)))
+  (* unpack *)
+  | Unpack (tv, rd, v) ->
+    let v_type = typeof_operand env v in
+    (match v_type with
+    | Exist (alpha, tao) ->
+      if alpha <> tv then type_error ("expect type variable of unpack to be " ^ (match alpha with TVar s -> s)) else
+      let env' = update_register env rd tao in
+      let env'' = update_ty_asgn env' alpha in
+      (env'', ())
+    | _ -> type_error (Printf.sprintf "expect %s to have some Exist type but got %s" (pp_op v) (pp_ty v_type)))
+  (* Nop *)
+  | Nop -> (env, ())
+  (* st *)
+  | St (rd, rs, i) ->
+    let rd_type = typeof_reg env rd in
+    let rs_type = typeof_reg env rs in
+    (match rd_type with
+    | TypeList l ->
+      let n = List.length l in
+      if i >= 0 && i < n then
+        if List.nth l i = rs_type then
+          (env, ())
+        else
+          type_error (type_err_expect (pp_reg rs) (List.nth l i) rs_type)
+      else
+        type_error (Printf.sprintf "Invalid i, because %s has type %s" (pp_reg rd) (pp_ty rd_type))
+    | _ -> type_error (Printf.sprintf "expect %s to have some Tuple type but got %s" (pp_reg rd) (pp_ty rd_type)))
 
 (* reg *)
 and typeof_reg env reg =
@@ -472,10 +517,20 @@ and typeof_word env w =
       | LStr s -> lookup_label env s)
   | Immediate _ -> Int (* int *)
   | Ns -> TTop (* ns *)
-  | Ptr _ -> (* ptr *) (* TODO *)
-    TPtr Nil 
-  | WordPack (_, _, _) -> (* pack *)
-    TTop (* TODO *)
+  | Ptr _ -> (* ptr *)
+    failwith "TODO"
+  | WordPack (tao, w, exist_ty) -> (* pack *)
+    let _ = typecheck_ty env tao in
+    let w_type = typeof_word env w in
+    (match exist_ty with
+    | Exist (alpha, tao') ->
+      let v_type_expect = ty_substitute tao' tao alpha in
+      if v_type_expect = w_type then
+        exist_ty
+      else
+        type_error (type_err_expect (pp_word w) v_type_expect w_type)
+    | _ -> type_error (Printf.sprintf "expect %s to have some exist type" (pp_ty exist_ty)))
+
   (* tapp *)
   | WordTyPoly (w, typ) -> 
     let _ = typecheck_ty env typ in
@@ -534,7 +589,18 @@ and typeof_operand env op =
             ^ " is a type variable, but was expecting a stack type variable") 
         | TAISTVar tv -> Forall (t, reg_asgn_substitute_sty ra sty tv)))
     | _ -> type_error ("Expect " ^ (pp_op op) ^ " to have some Forall type, but got " ^ (pp_ty w_type)))
-  | _ -> Int (* TODO *)
+  | OperandPack (tao, v, exist_ty) ->
+    let _ = typecheck_ty env tao in
+    let v_type = typeof_operand env v in
+    (match exist_ty with
+    | Exist (alpha, tao') ->
+      let v_type_expect = ty_substitute tao' tao alpha in
+      if v_type_expect = v_type then
+        exist_ty
+      else
+        type_error (type_err_expect (pp_op v) v_type_expect v_type)
+    | _ -> type_error (Printf.sprintf "expect %s to have some exist type" (pp_ty exist_ty)))
+  
 
 (* typecheck code *)
 and typeof_code (env : static_env) code =
@@ -597,7 +663,7 @@ let typecheck intputFile =
   (* Enter from the `instruction_seq` of "_main" *)
   (* let main = lookup_code_block ast "_main" in *)
   let env = first_pass empty_env ast in
-  print_endline "========";
+  print_endline "===============================================================";
   print_endline (pp_env env);
   let _ = typecheck_prog env ast in
   print_endline "Typechecked" ;
