@@ -22,21 +22,11 @@ dune runtest
 - `malloc` will overwrite `rax`
 - substituion is not capture avoiding, name your type variables carefully
 
-## Typing rule:
-Entry is a code_block_seq
-```
-    env |- codeblock
--------------------------------
-        env |- CodeBlockSeq codeblock
-```
+## Syntax related
+- for polymorphic type instantiation, for words use square brackets, e.g. `jmp _fact[nil]`, for operands use normal brackets.
+- 
 
-```
-    env |- cb  env |- cbseq
--------------------------------
-        env |- CodeBlockSeqCons cb cbseq
-```
-
-TODO:
+## TODO:
 - Use bdwgc for malloc
 - Check if Bop is buggy when the registers are the same
 - hval
