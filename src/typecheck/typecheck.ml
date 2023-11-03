@@ -168,6 +168,12 @@ let update_register env reg typ =
   let r' = update_register_asgn r reg typ in
   (l, r', t)
 
+(* delete the register assignment of reg from env *)
+let delete_register (env : static_env) reg =
+  let (l, (sp, rf), t) = env in
+  let rf' = List.filter (fun x -> let (reg', _) = x in reg' <> reg) rf in
+  (l, (sp, rf'), t)
+
 (* get the ith type in a stack item list, raise type error if theres a stack variable in the first i item *)
 let rec get_ith_type (l : stack_item list) i =
   match l with
@@ -440,7 +446,9 @@ and typeof_instruction (env : static_env) ins =
         type_error (Printf.sprintf "Invalid i, because %s has type %s" (pp_reg rd) (pp_ty rd_type))
     | _ -> type_error (Printf.sprintf "expect %s to have some Tuple type but got %s" (pp_reg rd) (pp_ty rd_type)))
   | MakeStack _ ->
-    (update_sp env Nil, ())
+    let env' = update_sp env Nil in
+    let env'' = delete_register env' Rax in
+    (env'', ())
 
 (* reg *)
 and typeof_reg env reg =

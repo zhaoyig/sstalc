@@ -1,0 +1,17 @@
+_f:
+    code[$rho]{ sp: top :: top :: $rho }.
+        mov rax, $1
+        sst sp(0), rax
+        sst sp(1), rax
+        mov rdi, rax
+        halt int
+_main:
+    code[]{ sp: nil }.
+        mov rax, $1
+        mov rax, $2
+        salloc 2
+        sst sp(0), rax
+        sst sp(1), rax
+        makestack 800
+        salloc 2
+        jmp _f[nil]

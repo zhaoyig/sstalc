@@ -1,3 +1,3 @@
 (tests (names test_typecheck integration_test)
 (libraries typecheck talParser prettyprint ounit2)
-(deps testcases/tc_sst.stal testcases/factorial.stal))
+(deps testcases/tc_sst.stal testcases/factorial.stal testcases/infloop.stal testcases/newstack.stal))
