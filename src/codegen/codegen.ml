@@ -117,6 +117,13 @@ let rec compileInstruction = function
     formatInstruction "mov" [compileReg r; "[" ^ "rsp" ^ compileOffset offset ^ "]"; ]
   ]
   | Nop -> []
+  | MakeStack wordsToAlloc -> 
+    let bytesToAlloc = wordsToAlloc * 8 in [
+    formatInstruction "mov" ["rdi"; string_of_int bytesToAlloc];
+    formatInstruction "call" ["_malloc"];
+    formatInstruction "add" ["rax"; string_of_int bytesToAlloc];
+    formatInstruction "mov" ["rsp"; "rax"]
+  ]
 
 
 let compileInstructionLine = function

@@ -68,6 +68,7 @@ open Stdlib
 %token TY_ASGN_NIL
 %token TTOP
 %token NS
+%token MAKESTACK
 
 (* Special Chars *)
 %token LTS (* less than sign *)
@@ -127,6 +128,7 @@ instruction:
   | SLD rd = reg COMMA rs = reg LPAREN i = INT RPAREN { Sld (rd, rs, i) }
   | SST SP LPAREN i = INT RPAREN COMMA rs = reg { Sstsp (Sp, rs, i) }
   | SLD rd = reg COMMA SP LPAREN i = INT RPAREN { Sldsp (rd, Sp, i) }
+  | MAKESTACK INT { MakeStack $2 }
 aop:
   | ADD { Add }
   | SUB { Sub }
@@ -145,6 +147,7 @@ ty:
   | TINT { Int }
   | LTS l = separated_list(COMMA, ty) GTS { TypeList l }
   | FORALL LSB a = ty_asgn RSB DOT r = reg_asgn { Forall (a, r) }
+  | reg_asgn { Forall ([], $1)}
   | EXIST TVAR DOT ty { Exist (TVar $2, $4) }
   | TPTR LPAREN stack_ty RPAREN { TPtr $3 }
   | TTOP { TTop }

@@ -51,12 +51,13 @@ let rec pp_instruction = function
   | Sldsp (reg, _, offset) ->
     formatInstruction "sld" [pp_reg reg; "sp"; string_of_int offset]
   | Nop -> ""
+  | MakeStack _ -> ""
 
 and pp_ty = function
   | Int -> "Int"
   | TypeList l -> "<" ^ String.concat "," (List.map pp_ty l) ^ ">"
   | Forall (ta, ra) -> 
-    Printf.sprintf "∀[%s].(%s)" (pp_ty_asgn ta) (pp_reg_asgn ra)
+    Printf.sprintf "∀[%s].%s" (pp_ty_asgn ta) (pp_reg_asgn ra)
   | Exist (_, _) -> "Exist(TODO)"
   | Var _ -> "Type Var(TODO)"
   | TPtr _ -> "Stack pointer(TODO)"
@@ -66,12 +67,16 @@ and pp_word = function
   | Immediate i -> string_of_int i
   | Label l -> (match l with 
     | LAdr i -> "label: " ^ (match i with | Address i -> (string_of_int i))
-    | LStr s -> "label: " ^ s)
+    | LStr s -> s)
+  | WordTyPoly (w, ty) -> Printf.sprintf "%s[%s]" (pp_word w) (pp_ty ty)
+  | WordSTyPoly (w, sty) -> Printf.sprintf "%s[%s]" (pp_word w) (pp_sty sty)
   | _ -> "TODO"
 
 and pp_op = function
   | Reg r -> pp_reg r
   | Word w -> pp_word w
+  | OperandTyPoly (op, typ) -> Printf.sprintf "%s[%s]" (pp_op op) (pp_ty typ)
+  | OperandSTyPoly (op, sty) -> Printf.sprintf "%s[%s]" (pp_op op) (pp_sty sty)
   | _ -> "TODO"
 
 and pp_sty = function
@@ -82,11 +87,11 @@ and pp_sty = function
 
 and pp_reg_asgn ra =
   let (stack, normal_reg) = ra in
-  (pp_sty stack) ^ " / "
+  "{" ^ "sp: " ^ (pp_sty stack) ^ ", "
     ^ String.concat ", " (List.map 
         (fun x -> (let (rr, tt) = x in
-         (pp_reg rr) ^ " : " ^ (pp_ty tt) ))
-        normal_reg)
+         (pp_reg rr) ^ " : " ^ (pp_ty tt)))
+        normal_reg) ^ "}"
   
 and pp_ty_asgn ta =
   String.concat ", " (List.map (fun x -> (match x with | TAITVar v -> (match v with | TVar s -> ("TVar(" ^ s ^ ")")) | TAISTVar v -> (match v with | STVar s -> (s)))) ta)
@@ -98,3 +103,8 @@ let pp_env (env) = (* TODO *)
   let (_, r, _) = env in
   let reg_asgn_str = pp_reg_asgn r in
   Printf.sprintf "R: %s | TypeVar: %s" reg_asgn_str "TODO"
+
+let pp_stack_list sl = 
+  "[" ^ (String.concat "," (List.map (fun x -> (match x with 
+    | SISty stv -> pp_sty stv
+    | SITy tv -> pp_ty tv)) sl)) ^ "]"

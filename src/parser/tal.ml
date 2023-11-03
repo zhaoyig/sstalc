@@ -59,6 +59,11 @@ and stack_type_var =
 (* This is ψ *)
 and label_asgn = (name * ty) list
 
+(* used to extract the items in a stack *)
+type stack_item =
+  | SITy of ty
+  | SISty of stack_ty
+
 (* Values *)
 
 type heap_val =
@@ -121,6 +126,7 @@ and instruction =
   | Sstsp of sp * reg * int
   | Sldsp of reg * sp * int
   | Nop 
+  | MakeStack of int
 
 and aop = 
   | Add | Sub | Mul

@@ -1,6 +1,7 @@
 open OUnit2
 open TalParser.Tal
 open Typecheck
+open Prettyprint
 
 let tests = "test suite for typecheck" >::: [
   (* "stack equality 1" >:: (fun _ -> 
@@ -56,6 +57,11 @@ let tests = "test suite for typecheck" >::: [
     assert_raises (StackTypeError "") (fun () -> (head_of_sit l1 b []));
     let c = [5] in
     assert_equal (head_of_sit l1 c []) [1;2;3;4];
+  );
+  "substi sty" >:: (fun _ ->
+    let a = (Forall ([], ((StackTypeVar (STVar "$p"), [(Rbx, Int)])))) ++ (StackTypeVar (STVar "$p")) in
+    let b = a in
+    print_endline (pp_sty (sty_substitute_sty a b (STVar "$p")))
   )
 ]
 

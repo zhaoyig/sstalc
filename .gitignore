@@ -9,7 +9,7 @@
 *.cmxa
 *.asm
 *.o
-
+*.exe
 **/.DS_Store
 
 # ocamlbuild working directory

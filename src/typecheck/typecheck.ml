@@ -93,10 +93,6 @@ and free_vars_ty (typ : ty) =
 let (@@) sty1 sty2 = Append (sty1, sty2)
 let (++) ty sty = Cons (ty, sty)
 
-(* used to extract the items in a stack *)
-type stack_item =
-  | SITy of ty
-  | SISty of stack_ty
 
 (* Serialize a stack_ty into a list of stack_item (either stack type variable or ty) *)
 let rec serialize_sty sty = 
@@ -245,11 +241,10 @@ let typecheck_stack_eq _ (sty1 : stack_ty) (sty2 : stack_ty) =
 let typecheck_subtype env ra1 ra2 =
   let (st1, normal_reg1) = ra1 in
   let (st2, normal_reg2) = ra2 in
+  print_endline ("ra1: " ^ (pp_reg_asgn ra1));
+  print_endline ("ra2: " ^ (pp_reg_asgn ra2));
   if not (subset_of normal_reg2 normal_reg1) then
-    (
-    print_endline ("ra1: " ^ (pp_reg_asgn ra1));
-    print_endline ("ra2: " ^ (pp_reg_asgn ra2));
-    type_error (" is not a subtype of (normal registers)"))
+    type_error ("ra1 is not a subtype of ra2 (normal registers)")
   else
     let _ = typecheck_each_ra env normal_reg1 in
     let _ = typecheck_each_ra env normal_reg2 in
@@ -265,11 +260,17 @@ let typecheck_each_type env l =
 let rec typeof_ins_seq env ins_seq = 
   match ins_seq with
   | Jmp v -> (* jmp *)
+    print_endline ("-------------------------typecheck-------------------------");
+    print_endline ("current env " ^ pp_env env);
+    print_endline ("type checking Jmp " ^ (pp_op v));
     let (_, r, _) = env in
     let operand_type = typeof_operand env v in
     (match operand_type with (* Type of v must be a code type *)
-    | Forall (_, ra) ->
+    | Forall (ta, ra) ->
       let _ = typecheck_subtype env r ra in
+      if ta <> [] then
+        type_error ("Cannot jmp because there's un-instantiated (stack) type variables: " ^ (pp_ty_asgn ta))
+      else
       ()
     | _ -> type_error ("Expect " ^ (pp_op v) ^ " to have some Forall type, but got " ^ (pp_ty operand_type)))
   | Halt t -> (* halt *)
@@ -338,7 +339,10 @@ and typeof_instruction (env : static_env) ins =
     let (_, ra1, _) = env in
     let operand_type = typeof_operand env op in
     (match operand_type with (* Type of op must be a code type *)
-    | Forall (_, ra2) ->
+    | Forall (ta, ra2) ->
+      if ta <> [] then
+        type_error ("Cannot jmp because there's un-instantiated (stack) type variables: " ^ (pp_ty_asgn ta))
+      else
       let _ = typecheck_subtype env ra1 ra2 in
       (env, ())
     | _ -> type_error ("Expect " ^ (pp_op op) ^ " to have some Forall type, but got " ^ (pp_ty operand_type)))
@@ -435,6 +439,8 @@ and typeof_instruction (env : static_env) ins =
       else
         type_error (Printf.sprintf "Invalid i, because %s has type %s" (pp_reg rd) (pp_ty rd_type))
     | _ -> type_error (Printf.sprintf "expect %s to have some Tuple type but got %s" (pp_reg rd) (pp_ty rd_type)))
+  | MakeStack _ ->
+    (update_sp env Nil, ())
 
 (* reg *)
 and typeof_reg env reg =
@@ -500,9 +506,9 @@ and sty_substitute (sty : stack_ty) (typ : ty) (tv : type_var) =
 (* Within sty, rewrite occurences of `stv` into `styp` *)
 and sty_substitute_sty (sty : stack_ty) (styp : stack_ty) (stv : stack_type_var) =
   let rec subst (sigma : stack_ty) =
-    if sigma = styp then StackTypeVar stv else
+    (* if sigma = styp then StackTypeVar stv else *)
     match sigma with
-    | Cons (tao, sigma') -> Cons (tao, subst sigma')
+    | Cons (tao, sigma') -> Cons ((ty_substitute_sty tao styp stv), subst sigma')
     | Append(sigma1, sigma2) -> Append (subst sigma1, subst sigma2)
     | StackTypeVar stv' -> if stv' = stv then styp else sigma
     | Nil -> Nil
