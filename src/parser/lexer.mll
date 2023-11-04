@@ -65,6 +65,7 @@ rule read =
   | "Exist" { EXIST }
   | "WordPack" { WORD_PACK }
   | "OperandPack" { OPERAND_PACK}
+  | "makestack" { MAKESTACK }
   | "sfree" { SFREE }
   | "salloc" { SALLOC }
   | "sst" { SST }
@@ -90,6 +91,8 @@ rule read =
   | ")" { RPAREN }
   (* Types *)
   | "int" { TINT }
+  | "top" { TTOP }
+  | "ns" { NS }
   (* Misc *)
   (* | "\n" { NEWLINE } *)
   (* id, int, eof *)

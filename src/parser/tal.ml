@@ -18,14 +18,21 @@ type kind =
   | Ktype   		  (* describes types of all values *)
   | Kstack  		  (* describes types of the stack & pointers into it *)
 
-type reg_asgn = RegAsgn of stack_ty * ((reg_asgn_item) list)
+(* This is Γ *)
+type reg_asgn = stack_ty * ((reg_asgn_item) list)
 
-and reg_asgn_item = RegAsgnItem of reg * ty
+and reg_asgn_item = reg * ty
 
-and ty_asgn =
-  | TyAsgnNil
+(* This is Δ *)
+and ty_asgn = ty_asgn_item list
+(* An old definition *)
+  (* | TyAsgnNil
   | TyAsgnCons1 of type_var * ty_asgn
-  | TyAsgnCons2 of stack_type_var * ty_asgn
+  | TyAsgnCons2 of stack_type_var * ty_asgn *)
+
+and ty_asgn_item = 
+  | TAITVar of type_var
+  | TAISTVar of stack_type_var
 
 and ty = 
   | Var of type_var (* Type Variable *)
@@ -34,10 +41,12 @@ and ty =
   | Forall of ty_asgn * reg_asgn
   | Exist of type_var * ty
   | TPtr of stack_ty
+  | TTop
   
 and type_var =
   | TVar of name
 
+(* This is σ *)
 and stack_ty = 
   | StackTypeVar of stack_type_var
   | Nil
@@ -46,6 +55,14 @@ and stack_ty =
 
 and stack_type_var =
   | STVar of name
+
+(* This is ψ *)
+and label_asgn = (name * ty) list
+
+(* used to extract the items in a stack *)
+type stack_item =
+  | SITy of ty
+  | SISty of stack_ty
 
 (* Values *)
 
@@ -63,13 +80,17 @@ and word_val =
   | Label of label
   | Immediate of int
   | WordPack of ty * word_val * ty
-(* Omitted polymorphic type instantiation *)
+  | WordTyPoly of word_val * ty (* w[tao] *)
+  | WordSTyPoly of word_val * stack_ty (* w[sigma] *)
   | Ptr of address
+  | Ns
 
 and operand =
   | Reg of reg
   | Word of word_val
   | OperandPack of ty * operand * ty
+  | OperandTyPoly of operand * ty
+  | OperandSTyPoly of operand * stack_ty
 
 (* Omitted polymorphic type instantiation *)
 
@@ -104,6 +125,8 @@ and instruction =
   | Sld of reg * reg * int
   | Sstsp of sp * reg * int
   | Sldsp of reg * sp * int
+  | Nop 
+  | MakeStack of int
 
 and aop = 
   | Add | Sub | Mul

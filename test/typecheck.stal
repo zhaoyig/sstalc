@@ -1,0 +1,16 @@
+_f:
+    code[$rho]{ sp: $rho, rax: int, rbx: int }.
+        add rax, rbx
+        malloc <int, int, int>
+        ld rbx, rax(2)
+        mov rdi, rbx
+        halt int
+_main:
+    code[]{ sp: nil }.
+        mov rax, $2
+        mov rbx, $5
+        add rax, rbx
+        mov rcx, $1
+        salloc 4
+        sfree 2
+        jmp _f[int :: int :: nil]

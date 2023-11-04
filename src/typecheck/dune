@@ -1,0 +1,3 @@
+(library
+ (name typecheck)
+ (libraries talParser codegen prettyprint))

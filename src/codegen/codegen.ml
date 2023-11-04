@@ -34,11 +34,16 @@ let rec compileWordVal = function
   | Immediate i -> string_of_int i
   | WordPack (_, wordVal, _) -> compileWordVal wordVal
   | Ptr adr -> compileAdress adr
+  | Ns -> "0"
+  | WordSTyPoly (w, _) -> compileWordVal w
+  | WordTyPoly (w, _) -> compileWordVal w
 
 let rec compileOperand = function
   | Reg r -> compileReg r
   | Word w -> compileWordVal w
   | OperandPack (_, op, _) -> compileOperand op
+  | OperandSTyPoly (op, _) -> compileOperand op
+  | OperandTyPoly (op, _) -> compileOperand op
 
 let compileAop = function
   | Add -> "add"
@@ -46,7 +51,7 @@ let compileAop = function
   | Mul -> "imul"
 
 let compileOffset offset =
-  (if offset < 0 then "-" else "+") ^ string_of_int (offset * 8)
+  (if offset < 0 then "-" else "+") ^ string_of_int ((abs offset) * 8)
 
 let compileBop = function
   | Beq -> "je"
@@ -110,6 +115,14 @@ let rec compileInstruction = function
   ]
   | Sldsp (r, _, offset) -> [
     formatInstruction "mov" [compileReg r; "[" ^ "rsp" ^ compileOffset offset ^ "]"; ]
+  ]
+  | Nop -> []
+  | MakeStack wordsToAlloc -> 
+    let bytesToAlloc = wordsToAlloc * 8 in [
+    formatInstruction "mov" ["rdi"; string_of_int bytesToAlloc];
+    formatInstruction "call" ["_malloc"];
+    formatInstruction "add" ["rax"; string_of_int bytesToAlloc];
+    formatInstruction "mov" ["rsp"; "rax"]
   ]
 
 

@@ -66,6 +66,9 @@ open Stdlib
 %token TPTR (* Pointer type *)
 %token SP
 %token TY_ASGN_NIL
+%token TTOP
+%token NS
+%token MAKESTACK
 
 (* Special Chars *)
 %token LTS (* less than sign *)
@@ -83,7 +86,7 @@ open Stdlib
 %token <string> SINGLE_LINE_COMMENT
 
 %left APPEND
-%left CONS (* Should it be left assoc? *)
+%right CONS
 %start <Tal.code_block_seq> prog
 %%
 
@@ -125,6 +128,7 @@ instruction:
   | SLD rd = reg COMMA rs = reg LPAREN i = INT RPAREN { Sld (rd, rs, i) }
   | SST SP LPAREN i = INT RPAREN COMMA rs = reg { Sstsp (Sp, rs, i) }
   | SLD rd = reg COMMA SP LPAREN i = INT RPAREN { Sldsp (rd, Sp, i) }
+  | MAKESTACK INT { MakeStack $2 }
 aop:
   | ADD { Add }
   | SUB { Sub }
@@ -143,8 +147,10 @@ ty:
   | TINT { Int }
   | LTS l = separated_list(COMMA, ty) GTS { TypeList l }
   | FORALL LSB a = ty_asgn RSB DOT r = reg_asgn { Forall (a, r) }
+  | reg_asgn { Forall ([], $1)}
   | EXIST TVAR DOT ty { Exist (TVar $2, $4) }
   | TPTR LPAREN stack_ty RPAREN { TPtr $3 }
+  | TTOP { TTop }
 
 stack_ty:
   | STVAR { StackTypeVar (STVar $1) }
@@ -153,22 +159,27 @@ stack_ty:
   | stack_ty APPEND stack_ty { Append ($1, $3) }
 
 ty_asgn:
-  | TY_ASGN_NIL { TyAsgnNil }
-  | STVAR COMMA ty_asgn { TyAsgnCons1 ((TVar $1), $3) }
-  | TVAR COMMA ty_asgn { TyAsgnCons2 ((STVar $1), $3) }
+  | separated_list(COMMA, ty_asgn_item) { $1 }
+
+ty_asgn_item:
+  | STVAR { TAISTVar (STVar $1) }
+  | TVAR { TAITVar (TVar $1) }
 
 reg_asgn:
-  | LCB SP COLON st = stack_ty COMMA l = separated_list(COMMA, reg_asgn_item) RCB { RegAsgn (st, l) }
-  | LCB SP COLON st = stack_ty RCB { RegAsgn (st, []) }
+  | LCB SP COLON st = stack_ty COMMA l = separated_list(COMMA, reg_asgn_item) RCB { (st, l) }
+  | LCB SP COLON st = stack_ty RCB { (st, []) }
 
 reg_asgn_item:
-  | reg COLON ty { RegAsgnItem ($1, $3) }
+  | reg COLON ty { ($1, $3) }
 
 word_val:
   | x = LABEL { Label (LStr x) }
   | x = INT { Label (LAdr (Address x)) }
   | x = IMMEDIATE { Immediate x }
   | WORD_PACK LSB t = ty COMMA w = word_val RSB AS tprime = ty { WordPack (t, w, tprime)}
+  | NS { Ns }
+  | word_val LSB ty RSB { WordTyPoly ($1, $3) }
+  | word_val LSB stack_ty RSB { WordSTyPoly ($1, $3) }
 
 reg:
   | EAX { Eax }
@@ -192,4 +203,6 @@ operand:
   | x = reg { Reg x }
   | x = word_val { Word x }
   | OPERAND_PACK LSB t = ty COMMA o = operand RSB AS tprime = ty { OperandPack (t, o, tprime)}
+  | operand LPAREN ty RPAREN { OperandTyPoly ($1, $3) }
+  | operand LPAREN stack_ty RPAREN { OperandSTyPoly ($1, $3) }
 %%
