@@ -7,7 +7,6 @@ open Stdlib
 %token <int> INT
 %token <int> IMMEDIATE
 %token <string> LABEL
-%token <int> ADDRESS
 %token <string> COMMENT
 %token EAX
 %token EBX
@@ -65,7 +64,6 @@ open Stdlib
 %token APPEND
 %token TPTR (* Pointer type *)
 %token SP
-%token TY_ASGN_NIL
 %token TTOP
 %token NS
 %token MAKESTACK
@@ -85,8 +83,44 @@ open Stdlib
 %token EOF
 %token <string> SINGLE_LINE_COMMENT
 
+(* Addition *)
+%token OTIMES "(*)"
+%token WEDGE "/\\"
+%token FRAC "/"
+
+%token DROP "Drop"
+%token COMM "Comm"
+%token ASSOC "Assoc"
+%token DISTR1 "Distr1"
+%token DISTR2 "Distr2"
+%token BORROW "Borrow"
+%token RETURN "Return"
+%token SPLIT "Split"
+%token JOIN "Join"
+
+%token POS1 "p1"
+%token POS2 "p2"
+%token NEXT "next"
+%token SEMICOLON ";"
+%token CAPNIL "capnil"
+%token PIPE "|"
+%token <Tal.name> LOCVAR
+%token <Tal.name> CAPVAR
+%token FREESTACK "freestack"
+%token COERCE "coerce"
+
+
+%token KLOC "Loc"
+%token KCAP "Cap"
+%token KACAP "ACap"
+%token KTYPE "Type"
+%token KATYPE "AType"
+  
 %left APPEND
 %right CONS
+%right OTIMES
+%right WEDGE
+%right FRAC
 %start <Tal.code_block_seq> prog
 %%
 
@@ -94,115 +128,161 @@ prog:
   | e = code_block_seq; EOF { e }
 
 code_block_seq:
-  | code_block { CodeBlockSeq $1 }
-  | code_block; code_block_seq { CodeBlockSeqCons ($1, $2) }
+  | EOF { CodeBlockSeq (CodeBlock ("", Code ([], [], CapNil, [], (Halt Int))))}
+// code_block_seq:
+//   | code_block { CodeBlockSeq $1 }
+//   | code_block; code_block_seq { CodeBlockSeqCons ($1, $2) }
 
-instruction_seq:
-  | JMP; x = operand { Jmp x }
-  | HALT; x = ty { Halt x }
-  | instruction_line; instruction_seq { InstructionSeq ($1, $2)}
+// instruction_seq:
+//   | JMP; x = operand { Jmp x }
+//   | HALT; x = ty { Halt x }
+//   | instruction_line; instruction_seq { InstructionSeq ($1, $2)}
 
-code_block:
-  | LABEL COLON code { CodeBlock (LStr($1), $3) }
+// code_block:
+//   | LABEL COLON code { CodeBlock (LStr($1), $3) }
 
-code:
-  | CODE LSB t = ty_asgn RSB r = reg_asgn DOT is = instruction_seq { Code (t, r, is) }
+// code:
+//   | CODE LSB t = ty_asgn RSB r = reg_asgn DOT is = instruction_seq { Code (t, r, is) }
 
-instruction_line:
-  | instruction option(COMMENT) { InstructionLine ($1, $2) }
-  | SINGLE_LINE_COMMENT { Comment $1 }
+// instruction_line:
+//   | instruction option(COMMENT) { InstructionLine ($1, $2) }
+//   | SINGLE_LINE_COMMENT { Comment $1 }
 
-instruction:
-  | aop rd = reg COMMA v = operand { Aop ($1, rd, v) }
-  | MOV rd = reg COMMA v = operand { Mov (rd, v) }
-  | LD rd = reg COMMA rs = reg LPAREN i = INT RPAREN { Ld (rd, rs, i) }
-  | ST rd = reg LPAREN i = INT RPAREN COMMA rs = reg { St (rd, rs, i) }
-  | bop reg COMMA operand { Bop ($1, $2, $4) }
-  | MALLOC LTS l = separated_list(COMMA, ty) GTS { Malloc l } 
-  | UNPACK LSB a = TVAR r = reg RSB COMMA v = operand { Unpack ((TVar a), r, v)}
-  | SALLOC INT { Salloc $2 }
-  | SFREE INT { Sfree $2 }
-  | MOV SP COMMA r = reg { Movsp1 (Sp, r) }
-  | MOV r = reg COMMA SP { Movsp2 (r, Sp) }
-  | SST rd = reg LPAREN i = INT RPAREN COMMA rs = reg { Sst (rd, rs, i) }
-  | SLD rd = reg COMMA rs = reg LPAREN i = INT RPAREN { Sld (rd, rs, i) }
-  | SST SP LPAREN i = INT RPAREN COMMA rs = reg { Sstsp (Sp, rs, i) }
-  | SLD rd = reg COMMA SP LPAREN i = INT RPAREN { Sldsp (rd, Sp, i) }
-  | MAKESTACK INT { MakeStack $2 }
-aop:
-  | ADD { Add }
-  | SUB { Sub }
-  | MUL { Mul }
+// instruction:
+//   | aop rd = reg COMMA v = operand { Aop ($1, rd, v) }
+//   | MOV rd = reg COMMA v = operand { Mov (rd, v) }
+//   | LD rd = reg COMMA rs = reg LPAREN i = INT RPAREN { Ld (rd, rs, i) }
+//   | ST rd = reg LPAREN i = INT RPAREN COMMA rs = reg { St (rd, rs, i) }
+//   | bop reg COMMA operand { Bop ($1, $2, $4) }
+//   | MALLOC LTS l = separated_list(COMMA, ty) GTS { Malloc l } 
+//   | UNPACK LSB a = TVAR r = reg RSB COMMA v = operand { Unpack ((TVar a), r, v)}
+//   | SALLOC INT { Salloc $2 }
+//   | SFREE INT { Sfree $2 }
+//   | MAKESTACK INT { MakeStack $2 }
+//   | FREESTACK { FreeStack }
+//   | COERCE witness { Coerce $2 }
 
-bop:
-  | BEQ { Beq }
-  | BNEQ { Bneq }
-  | BGT { Bgt }
-  | BLT { Blt }
-  | BGTE { Bgte }
-  | BLTE { Blte }
+// aop:
+//   | ADD { Add }
+//   | SUB { Sub }
+//   | MUL { Mul }
 
-ty:
-  | TVAR { Var (TVar $1) }
-  | TINT { Int }
-  | LTS l = separated_list(COMMA, ty) GTS { TypeList l }
-  | FORALL LSB a = ty_asgn RSB DOT r = reg_asgn { Forall (a, r) }
-  | reg_asgn { Forall ([], $1)}
-  | EXIST TVAR DOT ty { Exist (TVar $2, $4) }
-  | TPTR LPAREN stack_ty RPAREN { TPtr $3 }
-  | TTOP { TTop }
+// bop:
+//   | BEQ { Beq }
+//   | BNEQ { Bneq }
+//   | BGT { Bgt }
+//   | BLT { Blt }
+//   | BGTE { Bgte }
+//   | BLTE { Blte }
 
-stack_ty:
-  | STVAR { StackTypeVar (STVar $1) }
-  | NIL { Nil }
-  | ty CONS stack_ty { Cons ($1, $3) }
-  | stack_ty APPEND stack_ty { Append ($1, $3) }
+// ty:
+//   | TVAR { Var (TVar $1) }
+//   | TINT { Int }
+//   | LTS l = separated_list(COMMA, ty) GTS { TypeList l }
+//   | FORALL LSB a = ty_asgn RSB DOT LPAREN ra = reg_asgn COMMA c = cap RPAREN { Forall (a, ra, c) }
+//   | EXIST LSB ta = ty_asgn PIPE c = cap RSB DOT t = ty { Exist (ta, c, t) }
+//   | TPTR LPAREN stack_ty RPAREN { TPtr $3 }
+//   | TTOP { TTop }
 
-ty_asgn:
-  | separated_list(COMMA, ty_asgn_item) { $1 }
+// stack_ty:
+//   | STVAR { StackTypeVar (STVar $1) }
+//   | NIL { Nil }
+//   | ty CONS stack_ty { Cons ($1, $3) }
+//   | stack_ty APPEND stack_ty { Append ($1, $3) }
 
-ty_asgn_item:
-  | STVAR { TAISTVar (STVar $1) }
-  | TVAR { TAITVar (TVar $1) }
+// ty_asgn:
+//   | separated_list(COMMA, ty_asgn_item) { $1 }
 
-reg_asgn:
-  | LCB SP COLON st = stack_ty COMMA l = separated_list(COMMA, reg_asgn_item) RCB { (st, l) }
-  | LCB SP COLON st = stack_ty RCB { (st, []) }
+// ty_asgn_item:
+//   | STVAR { TAISTVar (STVar $1) }
+//   | TVAR { TAITVar (TVar $1) }
 
-reg_asgn_item:
-  | reg COLON ty { ($1, $3) }
+// reg_asgn:
+//   | LCB l = separated_list(COMMA, reg_asgn_item) RCB { (st, l) }
 
-word_val:
-  | x = LABEL { Label (LStr x) }
-  | x = INT { Label (LAdr (Address x)) }
-  | x = IMMEDIATE { Immediate x }
-  | WORD_PACK LSB t = ty COMMA w = word_val RSB AS tprime = ty { WordPack (t, w, tprime)}
-  | NS { Ns }
-  | word_val LSB ty RSB { WordTyPoly ($1, $3) }
-  | word_val LSB stack_ty RSB { WordSTyPoly ($1, $3) }
+// reg_asgn_item:
+//   | reg COLON ty { ($1, $3) }
 
-reg:
-  | EAX { Eax }
-  | EBX { Ebx }
-  | ECX { Ecx }
-  | EDX { Edx }
-  | ESI { Esi }
-  | EDI { Edi }
-  | EDP { Ebp }
-  | ESP { Esp }
-  | RAX { Rax }
-  | RBX { Rbx }
-  | RCX { Rcx }
-  | RDX { Rdx }
-  | RSI { Rsi }
-  | RDI { Rdi }
-  | RBP { Rbp }
-  | RSP { Rsp }
+// word_val:
+//   | x = LABEL { Label (LStr x) }
+//   | x = INT { Label (LAdr (Address x)) }
+//   | x = IMMEDIATE { Immediate x }
+//   | WORD_PACK LSB t = ty COMMA w = word_val RSB AS tprime = ty { WordPack (t, w, tprime)}
+//   | NS { Ns }
+//   | word_val LSB separated_list(COMMA, con) RSB { WordIns ($1, $3) }
 
-operand:
-  | x = reg { Reg x }
-  | x = word_val { Word x }
-  | OPERAND_PACK LSB t = ty COMMA o = operand RSB AS tprime = ty { OperandPack (t, o, tprime)}
-  | operand LPAREN ty RPAREN { OperandTyPoly ($1, $3) }
-  | operand LPAREN stack_ty RPAREN { OperandSTyPoly ($1, $3) }
+// kind:
+//   | KLOC
+//   | KCAP
+//   | KACAP
+//   | KTYPE
+//   | KATYPE
+
+// reg:
+//   | EAX { Eax }
+//   | EBX { Ebx }
+//   | ECX { Ecx }
+//   | EDX { Edx }
+//   | ESI { Esi }
+//   | EDI { Edi }
+//   | EDP { Ebp }
+//   | ESP { Esp }
+//   | RAX { Rax }
+//   | RBX { Rbx }
+//   | RCX { Rcx }
+//   | RDX { Rdx }
+//   | RSI { Rsi }
+//   | RDI { Rdi }
+//   | RBP { Rbp }
+//   | RSP { Rsp }
+
+// operand:
+//   | x = reg { Reg x }
+//   | x = word_val { Word x }
+//   | OPERAND_PACK LSB t = ty COMMA o = operand RSB AS tprime = ty { OperandPack (t, o, tprime)}
+//   | operand LPAREN ty RPAREN { OperandTyPoly ($1, $3) }
+//   | operand LPAREN stack_ty RPAREN { OperandSTyPoly ($1, $3) }
+
+// access_cap:
+//   | CAPVAR { CapCon (CapVar $1) }
+//   | CAPNIL { CapNil }
+//   | location COLON ty { CapTy ($1, $3) }
+//   | cap OTIMES cap { CapOTimes ($1, $3) }
+//   | cap WEDGE cap { CapWedge ($1, $3) }
+//   | cap FRAC cap { CapFrac ($1, $3) }
+
+// alloc_cap:
+
+
+// rewrite:
+//   | DROP { Drop }
+//   | COMM { Comm }
+//   | ASSOC { Assoc }
+//   | DISTR1 { Distr1 }
+//   | DISTR2 { Distr2 }
+//   | BORROW { Borrow }
+//   | RETURN { Return }
+//   | SPLIT { Split }
+//   | JOIN { Join }
+
+// pos_ind_item:
+//   | POS1 { Pos1 }
+//   | POS2 { Pos2 }
+
+// pos_ind:
+//   | l = separated_list(COMMA, pos_ind_item) { l }
+
+// witness_item:
+//   | LPAREN r = rewrite SEMICOLON pi = pos_ind RPAREN { (r, pi) }
+
+// witness:
+//   | separated_list(COMMA, witness_item) { $1 }
+
+// loc_var:
+//   | LOCVAR { LocVar $1 }
+
+// location:
+//   | loc_var { LocCon $1 }
+//   | NEXT LPAREN loc = location RPAREN { Next loc }
+
 %%

@@ -2,67 +2,116 @@ type name = string
 
 type reg = Eax | Ebx | Ecx | Edx | Esi | Edi | Ebp | Esp | Rax | Rbx | Rcx | Rdx | Rsi | Rdi | Rbp | Rsp
 
-type sp = Sp
-
-type label = 
-  | LStr of string
-  | LAdr of address
-
-and address = 
-  | Address of int
-
 (* Types *)
 
 type kind = 
-    K4byte  		  (* describes types of 32-bit values *)
-  | Ktype   		  (* describes types of all values *)
-  | Kstack  		  (* describes types of the stack & pointers into it *)
+  | KLoc
+  | KCap
+  | KACap
+  | KTy
+  | KATy
+
+type cap_var = CapVar of name
+type loc_var = LocVar of name
+type ty_var = TyVar of name
+type aty_var = ATyVar of name
+type alloc_var = AllocVar of name
+
+and con_var =
+  | CVLoc of loc_var
+  | CVCap of cap_var
+  | CVTy of ty_var
+  | CVATy of aty_var
+  | CVAlloc of alloc_var
+
+and con =
+  | ConLoc of location
+  | ConCap of access_cap
+  | ConTy of ty
+  | ConATy of aty
+
+(* TODO: Runtime location needed here? *)
+
+and location =
+  | LocCon of loc_var (* η *)
+  | LocB (* b *)
+  | LocNext of location
+
+and predicate = 
+  | PStacktop
+  | Pstackbase
+  | Ptuplestart
+  | Ptupleend
+  
+and access_cap = 
+  | CapCon of cap_var (* ε *)
+  | CapNil
+  | CapTy of location * ty
+  | CapATy of location * aty
+  | CapOTimes of access_cap * access_cap
+  | CapWedge of access_cap * access_cap
+  | CapFrac of access_cap * access_cap
+
+and alloc_cap = alloc_cap_item list
+
+and alloc_cap_item =
+  | AllocCon of alloc_var
+  | AllocPred of location * predicate
+
+and ty = 
+  | TyCon of ty_var (* Type Variable *)
+  | TTop (* top type *)
+  | Int
+  | TyPtr of location
+  | Exist of ty_asgn * access_cap * alloc_cap * ty
+  | Forall of ty_asgn * reg_asgn * access_cap * alloc_cap
+
+and aty =
+  | ATyCon of aty_var
+  | ATyNil
+  | ATyCons of ty * aty
 
 (* This is Γ *)
-type reg_asgn = stack_ty * ((reg_asgn_item) list)
+and reg_asgn = (reg_asgn_item) list
 
 and reg_asgn_item = reg * ty
 
 (* This is Δ *)
+(* This should really be called context *)
 and ty_asgn = ty_asgn_item list
-(* An old definition *)
-  (* | TyAsgnNil
-  | TyAsgnCons1 of type_var * ty_asgn
-  | TyAsgnCons2 of stack_type_var * ty_asgn *)
 
-and ty_asgn_item = 
-  | TAITVar of type_var
-  | TAISTVar of stack_type_var
-
-and ty = 
-  | Var of type_var (* Type Variable *)
-  | Int
-  | TypeList of (ty) list
-  | Forall of ty_asgn * reg_asgn
-  | Exist of type_var * ty
-  | TPtr of stack_ty
-  | TTop
-  
-and type_var =
-  | TVar of name
-
-(* This is σ *)
-and stack_ty = 
-  | StackTypeVar of stack_type_var
-  | Nil
-  | Cons of ty * stack_ty
-  | Append of stack_ty * stack_ty
-
-and stack_type_var =
-  | STVar of name
+and ty_asgn_item =
+  | CtxtConVar of con_var (* FIXME: need kind here? *)
+  | CtxtLoc of loc_var * location
 
 (* This is ψ *)
 and label_asgn = (name * ty) list
 
+type rewrite = 
+  | Drop
+  | Comm
+  | Assoc
+  | Distr1
+  | Distr2
+  | Borrow
+  | Return
+  | Split
+  | Join
+
+and pos_ind = pos_ind_item list
+
+and pos_ind_item =
+  | Pos1
+  | Pos2
+
+and witness_item = rewrite * pos_ind
+
+and witness = witness_item list
+
 (* used to extract the items in a stack *)
 type stack_item =
   | SITy of ty
-  | SISty of stack_ty
+  | SISty of aty
 
 (* Values *)
 
@@ -71,28 +120,23 @@ type heap_val =
   | HCode of code
 
 and code = 
-  | Code of ty_asgn * reg_asgn * instruction_seq
+  | Code of ty_asgn * reg_asgn * access_cap * alloc_cap * instruction_seq
 
 and code_block =
-  | CodeBlock of label * code
+  | CodeBlock of name * code
 
 and word_val = 
-  | Label of label
+  | Label of name (* #d *)
   | Immediate of int
-  | WordPack of ty * word_val * ty
-  | WordTyPoly of word_val * ty (* w[tao] *)
-  | WordSTyPoly of word_val * stack_ty (* w[sigma] *)
-  | Ptr of address
+  | WordIns of word_val * con list
+  | Ptr
   | Ns
+  (* pack? *)
 
 and operand =
   | Reg of reg
   | Word of word_val
-  | OperandPack of ty * operand * ty
-  | OperandTyPoly of operand * ty
-  | OperandSTyPoly of operand * stack_ty
-
-(* Omitted polymorphic type instantiation *)
+  | OperandIns of operand * con list  
 
 (* Instructions *)
 
@@ -116,17 +160,14 @@ and instruction =
   | St of reg * reg * int
   | Bop of bop * reg * operand
   | Malloc of (ty) list
-  | Unpack of type_var * reg * operand
+  | Pack of con list * access_cap * alloc_cap * reg
+  | Unpack of ty_asgn * reg
   | Salloc of int
   | Sfree of int
-  | Movsp1 of sp * reg (* Mov into sp *)
-  | Movsp2 of reg * sp (* Mov out of sp *)
-  | Sst of reg * reg * int
-  | Sld of reg * reg * int
-  | Sstsp of sp * reg * int
-  | Sldsp of reg * sp * int
   | Nop 
-  | MakeStack of int
+  | MakeStack of loc_var * int
+  | FreeStack
+  | Coerce of witness 
 
 and aop = 
   | Add | Sub | Mul

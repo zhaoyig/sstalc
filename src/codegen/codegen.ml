@@ -22,28 +22,17 @@ let compileReg = function
 let formatInstruction instruction operands =
   instruction ^ " " ^ String.concat ", " operands
 
-let compileAdress = function
-| Address i -> string_of_int i
-
-let compileLabel = function
-  | LStr s -> s
-  | LAdr adr -> compileAdress adr
-
 let rec compileWordVal = function
-  | Label l -> compileLabel l
+  | Label s -> s
   | Immediate i -> string_of_int i
-  | WordPack (_, wordVal, _) -> compileWordVal wordVal
-  | Ptr adr -> compileAdress adr
+  | Ptr -> failwith "encountered word pointer" (* TODO *)
   | Ns -> "0"
-  | WordSTyPoly (w, _) -> compileWordVal w
-  | WordTyPoly (w, _) -> compileWordVal w
+  | WordIns (w, _) -> compileWordVal w
 
 let rec compileOperand = function
   | Reg r -> compileReg r
   | Word w -> compileWordVal w
-  | OperandPack (_, op, _) -> compileOperand op
-  | OperandSTyPoly (op, _) -> compileOperand op
-  | OperandTyPoly (op, _) -> compileOperand op
+  | OperandIns (o, _) -> compileOperand o
 
 let compileAop = function
   | Add -> "add"
@@ -61,7 +50,7 @@ let compileBop = function
   | Bgte -> "jge"
   | Blte -> "jle"
 
-let rec compileInstruction = function
+let compileInstruction = function
   | Aop (aop, reg1, operand) -> 
     let reg1Exp = compileReg reg1 in
     let opExp = compileOperand operand in
@@ -92,9 +81,9 @@ let rec compileInstruction = function
       formatInstruction "mov" ["rdi"; string_of_int bytesToAlloc];
       formatInstruction "call" ["_malloc"];
     ]
-  | Unpack (_, reg, operand) ->
+  | Unpack (_, _) ->
     [
-      formatInstruction "mov" [compileReg reg; compileOperand operand];
+      (* formatInstruction "mov" [compileReg reg; compileOperand operand]; *)
     ]
   | Salloc size -> [
     formatInstruction "sub" ["rsp"; string_of_int (size * 8)];
@@ -102,28 +91,15 @@ let rec compileInstruction = function
   | Sfree size -> [
     formatInstruction "add" ["rsp"; string_of_int (size * 8)]
   ]
-  | Movsp1 (_, reg) -> [
-    formatInstruction "mov" ["rsp"; compileReg reg]
-  ]
-  | Movsp2 (reg, _) -> [
-    formatInstruction "mov" [compileReg reg; "rsp"]
-  ]
-  | Sst (reg1, reg2, offset) -> compileInstruction (St (reg1, reg2, offset))
-  | Sld (reg1, reg2, offset) -> compileInstruction (Ld (reg1, reg2, offset))
-  | Sstsp (_, r, offset) -> [
-    formatInstruction "mov" ["[" ^ "rsp" ^ compileOffset offset ^ "]"; compileReg r]
-  ]
-  | Sldsp (r, _, offset) -> [
-    formatInstruction "mov" [compileReg r; "[" ^ "rsp" ^ compileOffset offset ^ "]"; ]
-  ]
   | Nop -> []
-  | MakeStack wordsToAlloc -> 
+  | MakeStack (_, wordsToAlloc) -> 
     let bytesToAlloc = wordsToAlloc * 8 in [
     formatInstruction "mov" ["rdi"; string_of_int bytesToAlloc];
     formatInstruction "call" ["_malloc"];
     formatInstruction "add" ["rax"; string_of_int bytesToAlloc];
     formatInstruction "mov" ["rsp"; "rax"]
   ]
+  | _ -> failwith "TODO"
 
 
 let compileInstructionLine = function
@@ -142,12 +118,12 @@ let rec compileInstructionSeq = function
       compileInstructionLine instruction_line @ compileInstructionSeq instructionSeq
 
 let compileCode = function
-  | Code (_, _, ins_seq) ->
+  | Code (_, _, _, _, ins_seq) ->
     compileInstructionSeq ins_seq
-
+    
 let compileCodeBlock = function
   | CodeBlock (label, code) -> 
-    [(compileLabel label) ^ ":"] @ compileCode code
+    [label ^ ":"] @ compileCode code
 
 let rec compileCodeBlockSeq = function
   | CodeBlockSeq code_block -> compileCodeBlock code_block

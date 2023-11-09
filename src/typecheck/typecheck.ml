@@ -8,18 +8,41 @@ exception StackTypeError of string
 let type_error s = 
   raise (TypeError s)
 
-type static_env = label_asgn * reg_asgn * ty_asgn
+type static_env = label_asgn * reg_asgn * ty_asgn * access_cap * alloc_cap
 
-let empty_env = ([], (Nil, []), [])
+let empty_env = ([], [], [], CapNil, [])
+
+let get_la env = let (l, _, _, _, _) = env in l
+
+let get_ra env = let (_, r, _, _, _) = env in r
+
+let get_ta env = let (_, _, t, _, _) = env in t
+
+let get_access_cap env = let (_, _, _, cap, _) = env in cap
+
+let get_alloc_cap env = let (_, _, _, _, cap) = env in cap
+
+let set_la env la' = 
+  let (_, r, t, acc_cap, all_cap) = env in (la', r, t, acc_cap, all_cap)
+
+let set_ra env ra' = 
+  let (l, _, t, acc_cap, all_cap) = env in (l, ra', t, acc_cap, all_cap)
+
+let set_ta env ta' = 
+  let (l, r, _, acc_cap, all_cap) = env in (l, r, ta', acc_cap, all_cap)
+
+let set_access_cap env access_cap' = 
+  let (l, r, t, _, all_cap) = env in (l, r, t, access_cap', all_cap)
+
+let set_alloc_cap env alloc_cap' = 
+  let (l, r, t, acc_cap, _) = env in (l, r, t, acc_cap, alloc_cap')
+
+
 
 (****************************** Helper functions ******************************)
 (* Return a string about a type mismatch error *)
 let type_err_expect str expected_ty actual_ty =
   Printf.sprintf "Expect %s to have type %s, but got %s\n" str (pp_ty expected_ty) (pp_ty actual_ty)
-
-let get_str_of_label = function
-  | LAdr _ -> failwith "Invalid label"
-  | LStr s -> s
 
 (* Returns the `code` corresponding to label `l`, in the code_block_seq `ast` *)
 let rec lookup_code_block ast l =
@@ -27,20 +50,16 @@ let rec lookup_code_block ast l =
   | CodeBlockSeq code_block -> 
     (match code_block with
       | CodeBlock (label, code) -> 
-        if get_str_of_label label = l then code
+        if label = l then code
         else failwith ("Cannot find label" ^ l))
   | CodeBlockSeqCons (h, t) ->
     (match h with
       | CodeBlock (label, code) -> 
-        if get_str_of_label label = l then code
+        if label = l then code
         else lookup_code_block t l)
 
-let get_label_assignment env =
-  let (label_assignment, _, _) = env in
-  label_assignment
-
 let lookup_label (env: static_env) (x : string) : ty =
-  let (label_assignment, _, _) = env in
+  let label_assignment = get_la env in
   match List.assoc_opt x label_assignment with
   | Some t -> t
   | None -> failwith ("Unbound label: " ^ x)
@@ -50,57 +69,61 @@ let extend_label label_assignment label_name typ =
   (label_name, typ) :: label_assignment
 
 let lookup_register (env : static_env) (r : reg) : ty =
-  let (_, (_, rf), _) = env in
-  match (List.assoc_opt r rf) with
+  let ra = get_ra env in
+  match (List.assoc_opt r ra) with
   | Some t -> t
   | None -> failwith ("Unbound register: " ^ (pp_reg r))
 
 (* Return a new register assignment with `reg` having type `t` *)
-let update_register_asgn (register_asgn : reg_asgn) (r : reg) (t : ty) =
-  let (sp_type, normal_reg) = register_asgn in
-  (sp_type, (update_assoc_list r t normal_reg))
+let update_register_asgn (ra : reg_asgn) (r : reg) (t : ty) =
+  update_assoc_list r t ra
+
+let update_ra env ra' =
+  let (l,_,t,c) = env in
+  (l,ra', t, c)
 
 (* All the elements in l1 that is not in l2 *)
 let diff l1 l2 = List.filter (fun x -> not (List.mem x l2)) l1
 
 (* free vars of a register asgn *)
-let rec free_vars_ra (ra : reg_asgn) =
+(* let rec free_vars_ra (ra : reg_asgn) =
   let (sty, normal_reg) = ra in
-  (free_vars_sty sty) @ (List.concat_map (fun x -> let (_, t) = x in free_vars_ty t) normal_reg)
+  (free_vars_sty sty) @ (List.concat_map (fun x -> let (_, t) = x in free_vars_ty t) normal_reg) *)
 
-and free_vars_sty sty = 
+(* and free_vars_sty sty = 
   match sty with
   | StackTypeVar v -> [TAISTVar v]
   | Nil -> []
   | Cons (typ, sty) -> (free_vars_ty typ) @ (free_vars_sty sty)
-  | Append (sty1, sty2) -> (free_vars_sty sty1) @ (free_vars_sty sty2)
+  | Append (sty1, sty2) -> (free_vars_sty sty1) @ (free_vars_sty sty2) *)
 
 (* return the free variables in a `ty` as a list *)
-and free_vars_ty (typ : ty) =
+(* and free_vars_ty (typ : ty) =
   match typ with
   | Var v -> [TAITVar v] (* Type variable *)
   | Int -> []
   | TypeList l -> List.concat_map free_vars_ty l
-  | Forall (ta, ra) -> 
+  | Forall (ta, ra, _) -> 
     let l1 = free_vars_ra ra in
     let l2 = ta in
     diff l1 l2
-  | Exist (tv, typp) -> diff (free_vars_ty typp) [TAITVar tv] 
+  | Exist (_, _, _) -> [] (* TODO *)
   | TPtr sty -> free_vars_sty sty
   | TTop -> []
+  | _ -> failwith "TODO" *)
 
 (* To make life easy *)
-let (@@) sty1 sty2 = Append (sty1, sty2)
-let (++) ty sty = Cons (ty, sty)
+(* let (@@) sty1 sty2 = Append (sty1, sty2)
+let (++) ty sty = Cons (ty, sty) *)
 
 
 (* Serialize a stack_ty into a list of stack_item (either stack type variable or ty) *)
-let rec serialize_sty sty = 
+(* let rec serialize_sty sty = 
   match sty with
   | Cons (ty, sty') -> (SITy ty) :: (serialize_sty sty')
   | Append (sty1, sty2) -> (serialize_sty sty1) @ (serialize_sty sty2)
   | Nil -> []
-  | StackTypeVar _ -> [SISty sty]
+  | StackTypeVar _ -> [SISty sty] *)
 
 (*  *)
 let rec strip_n_types l n =
@@ -134,7 +157,7 @@ let rec insert_ty_to_sit ty sit i =
   | h :: t -> h :: (insert_ty_to_sit ty t (i - 1))
 
 
-let rec deserialize_sty l =
+(* let rec deserialize_sty l =
   match l with
   | h :: t ->
     (match h with
@@ -143,7 +166,7 @@ let rec deserialize_sty l =
       (match t with
       | _ :: _ -> Append (rho, deserialize_sty t)
       | [] -> rho))
-  | [] -> Nil
+  | [] -> Nil *)
 
 let update_sp env sp' = 
   let (l, r, t) = env in
@@ -164,15 +187,15 @@ let rec head_of_sit sit1 sit3 acc =
 
 (* takes an env and return new env *)
 let update_register env reg typ =
-  let (l, r, t) = env in
+  let (l, r, t, cap) = env in
   let r' = update_register_asgn r reg typ in
-  (l, r', t)
+  (l, r', t, cap)
 
 (* delete the register assignment of reg from env *)
 let delete_register (env : static_env) reg =
-  let (l, (sp, rf), t) = env in
-  let rf' = List.filter (fun x -> let (reg', _) = x in reg' <> reg) rf in
-  (l, (sp, rf'), t)
+  let (l, ra, t, access_cap, alloc_cap) = env in
+  let ra' = List.filter (fun x -> let (reg', _) = x in reg' <> reg) ra in
+  (l, ra', t, access_cap, alloc_cap)
 
 (* get the ith type in a stack item list, raise type error if theres a stack variable in the first i item *)
 let rec get_ith_type (l : stack_item list) i =
@@ -186,36 +209,110 @@ let rec get_ith_type (l : stack_item list) i =
       type_error "encountered stack variable in stack while getting a type from it"
   )
 
-let typecheck_ty env typ =
+(* let typecheck_ty env typ =
   let free_vars = free_vars_ty typ in
-  let (_, _, env_vars) = env in
+  let env_vars = get_ta env in
   let unbound_free_vars = diff free_vars env_vars in
   if unbound_free_vars <> [] then
-    type_error ((pp_ty_asgn unbound_free_vars) ^ " is unbound") (* TODO *)
+    type_error ((pp_ty_asgn unbound_free_vars) ^ " is unbound") *)
 
 (* stype *)
-let rec typecheck_sty env sty =
+(* let rec typecheck_sty env sty =
   let free_vars = free_vars_sty sty in
   let (_, _, env_vars) = env in
   let unbound_free_vars = diff free_vars env_vars in
   if unbound_free_vars <> [] then
-    type_error ((pp_ty_asgn unbound_free_vars) ^ " is unbound in stack type " ^ (pp_sty sty)) (* TODO *)
+    type_error ((pp_ty_asgn unbound_free_vars) ^ " is unbound in stack type " ^ (pp_sty sty)) *)
+
+(* ============================ Well-formedness ============================ *)
+let in_context (ctxt : ty_asgn) (cv : con_var) =
+  match List.mem (CtxtConVar cv) ctxt with
+  | true -> ()
+  | false -> type_error "" (* TODO: *)
+
+let rec wf_loc (env : static_env) (loc : location) =
+  match loc with
+  | LocCon lv -> 
+    let ta = get_ta env in
+    in_context ta (CVLoc lv)
+  | LocB -> ()
+  | LocNext loc' -> wf_loc env loc'
+
+let concat_ctxt ctxt1 ctxt2 =
+  ctxt1 @ ctxt2
+
+let rec wf_ctxt env ctxt =
+  let ta = get_ta env in
+  match ctxt with
+  | [] -> ()
+  | h :: t ->
+    (match h with
+    | CtxtConVar _ -> wf_ctxt env t
+    | CtxtLoc (_, loc) -> 
+      let _ = wf_ctxt env t in
+      let env' = set_ta env (concat_ctxt ctxt ta) in
+      let _ = wf_loc env' loc in
+      ())
+
+let rec wf_ty (env : static_env) (typ : ty) =
+  match typ with
+  | TyCon tv ->
+    in_context (get_ta env) (CVTy tv)
+  | TTop -> ()
+  | Int -> ()
+  | TyPtr l -> wf_loc env l
+  | Forall (delta', ra, access_cap, alloc_cap) ->
+    let _ = wf_ctxt env delta' in (* 1st *)
+    let delta = get_ta env in 
+    let env' = set_ta env (concat_ctxt delta delta') in
+    let _ = wf_ty_regfile env' ra in (* 2nd *)
+    let _ = wf_cap env' access_cap in (* 3rd *)
+    let _ = wf_acap env' alloc_cap in (* 4th *)
+    ()
+  | _ -> failwith "TODO"
 
 (* Iterate through normal registers and typecheck each type *)
-and typecheck_each_ra env l =  
+and wf_ty_regfile env (l : reg_asgn) =  
   match l with
   | [] -> ()
   | h :: t -> 
     let (_, typ) = h in
-    let _ = typecheck_ty env typ in
-    typecheck_each_ra env t
+    let _ = wf_ty env typ in
+    wf_ty_regfile env t
 
-(* rftype *)
-let typeof_reg_asgn env reg_assignments =
-  let (stack_type, ra) = reg_assignments in
-  let _ = typecheck_sty env stack_type in  
-  let _ = typecheck_each_ra env ra in
-  ()
+and wf_cap env access_cap =
+  match access_cap with
+  | CapCon cv ->
+    in_context (get_ta env) (CVCap cv)
+  | CapNil ->
+    ()
+  | CapTy (l, tao) ->
+    let _ = wf_loc env l in
+    wf_ty env tao
+  | CapATy (l, sigma) ->
+    let _ = wf_loc env l in
+    wf_aty env sigma
+  | CapOTimes (c1, c2) ->
+    let _ = wf_cap env c1 in
+    wf_cap env c2
+  | CapWedge (c1, c2) ->
+    let _ = wf_cap env c1 in
+    wf_cap env c2
+  | CapFrac (c1, c2) ->
+    let _ = wf_cap env c1 in
+    wf_cap env c2
+  
+and wf_aty env aty =
+  match aty with
+  | ATyNil -> ()
+  | ATyCon atyv -> in_context (get_ta env) (CVATy atyv)
+  | ATyCons (tao, sigma) -> let _ = wf_aty env sigma in wf_ty env tao
+
+and wf_acap env alloc_cap =
+  match alloc_cap with
+  | [] -> ()
+  | h :: t ->
+    
 
 (* Check if ra2 is a subset of ra1 *)
 let rec subset_of ra2 ra1 =
@@ -228,11 +325,11 @@ let rec subset_of ra2 ra1 =
 
 (* add tv to typing variables, raise type error if its a duplicate *)
 let update_ty_asgn (env : static_env) tv =
-  let (l, r, ta) = env in
+  let (l, r, ta, cap) = env in
   if (List.mem (TAITVar tv) ta) then 
     type_error "duplicate type variable"
   else
-    (l, r, ta)
+    (l, r, ta, cap)
 
 (******************************** Typing rules ********************************)
 (* Typecheck if two stack types are equal *)
@@ -269,7 +366,7 @@ let rec typeof_ins_seq env ins_seq =
     print_endline ("-------------------------typecheck-------------------------");
     print_endline ("current env " ^ pp_env env);
     print_endline ("type checking Jmp " ^ (pp_op v));
-    let (_, r, _) = env in
+    let (_, r, _, _) = env in
     let operand_type = typeof_operand env v in
     (match operand_type with (* Type of v must be a code type *)
     | Forall (ta, ra) ->
@@ -296,9 +393,9 @@ and typeof_instruction (env : static_env) ins =
   match ins with
   (* mov *)
   | Mov (reg, op) -> 
-    let (l, r, t) = env in
+    let (l, r, t, cap) = env in
     let op_type = typeof_operand env op in
-    let new_env = (l, update_register_asgn r reg op_type, t) in
+    let new_env = (l, update_register_asgn r reg op_type, t, cap) in
     (new_env, ())
   (* aop *)
   | Aop (_, r, op) -> 
@@ -449,6 +546,7 @@ and typeof_instruction (env : static_env) ins =
     let env' = update_sp env Nil in
     let env'' = delete_register env' Rax in
     (env'', ())
+  | _ -> failwith "TODO"
 
 (* reg *)
 and typeof_reg env reg =
@@ -631,6 +729,35 @@ and type_annotation_of_code code =
   | Code (type_assignments, reg_assignments, _) -> 
     Forall (type_assignments, reg_assignments)
 
+and wf_loc_pred (env : static_env) (pr : pred) =
+  match List.find_opt (fun x -> x = TAIPred pr) (get_ta env) with
+  | Some _ -> ()
+  | None -> type_error ((pp_pred pr) ^ " is not bound")
+
+and wf_ctxt (env : static_env) (ta : ty_asgn) = (* well-formedness of type assignments *)
+  match ta with
+  | [] -> ()
+  | h :: t -> (match h with
+    | TAIPred pr -> (match pr with
+      | PredEq (l1, _) -> 
+        let _ = wf_ctxt env t in
+        wf_loc env l1 (* TODO, clarity *)
+      | _ -> wf_ctxt env t)
+    | _ -> wf_ctxt env t)
+
+
+
+and wf_reg_asgn (env : static_env) (ra : reg_asgn) =
+  match ra with
+  | [] -> ()
+  | h :: t ->  
+    let (_, typ) = h in
+    let _ = wf_ty env typ in
+    wf_reg_asgn env t
+
+(* and wf_cap (env : static_env) (c : cap) = *)
+
+
 (* Second pass: typecheck the program *)
 and typecheck_prog env (ast : code_block_seq) =
   match ast with
@@ -643,13 +770,13 @@ and typecheck_prog env (ast : code_block_seq) =
     (match cb with
     | CodeBlock (_, code) ->
       let _ = typeof_code env code in
-      let next_env = (get_1 env, (Nil, []), []) in (* the environment for typechecking next label is empty except the label assignments *)
+      let next_env = (get_la env, (Nil, []), [], CapNil) in (* the environment for typechecking next label is empty except the label assignments *)
       let _ = typecheck_prog next_env cbs in
       ())
 
 (* First pass: store all the type annotation info of labels into environment *)
 and first_pass env (ast : code_block_seq) : static_env =
-  let (l, r, t) = env in
+  let (l, r, t, cap) = env in
   match ast with
   | CodeBlockSeq cb -> 
     (match cb with
@@ -658,7 +785,7 @@ and first_pass env (ast : code_block_seq) : static_env =
       | LAdr _ -> failwith "encountered constant address while storing type annotations"
       | LStr s -> s) in
       let code_annotation = type_annotation_of_code code in
-      let new_env = ((extend_label l label_name code_annotation), r, t) in
+      let new_env = ((extend_label l label_name code_annotation), r, t, cap) in
       new_env
     )
   | CodeBlockSeqCons (cb, cbs) -> 
@@ -668,7 +795,7 @@ and first_pass env (ast : code_block_seq) : static_env =
       | LAdr _ -> failwith "encountered constant address while storing type annotations"
       | LStr s -> s) in
       let code_annotation = type_annotation_of_code code in
-      let new_env = ((extend_label l label_name code_annotation), r, t) in
+      let new_env = ((extend_label l label_name code_annotation), r, t, cap) in
       first_pass new_env cbs
     )
     

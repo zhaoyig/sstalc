@@ -6,7 +6,8 @@ let white = [' ' '\t']+
 let digit = ['0'-'9']
 let int = '-'? digit+
 let letter = ['a'-'z' 'A'-'Z']
-let id = letter+
+let id_chars = ['a'-'z' 'A'-'Z' '_' '0'-'9']
+let id = id_chars+
 
 (* Constant value start with $ *)
 let immediate = '$' '-'? digit+
@@ -15,13 +16,19 @@ let immediate = '$' '-'? digit+
 let label = '_' ['a'-'z' 'A'-'Z' '0'-'9']+
 
 (* Stack type variables start with ! *)
-let stack_type_var = '$' letter+
+let stack_type_var = '$' id_chars+
 
 (* Comment start with ; *)
 let comment = ';' [^'\n']+
 
 (* Single line comment start with # *)
 let sl_comment = '#' [^'\n']+
+
+(* location constructor *)
+let location_con = '!' id_chars+
+
+(* capability constructor *)
+let cap_con = '^' id_chars+
 
 rule read =
   parse
@@ -76,7 +83,6 @@ rule read =
   | "::" { CONS }
   | "@" { APPEND }
   | "PTR" { TPTR }
-  | "cdot" { TY_ASGN_NIL }
   | "sp" { SP }
   | "<" { LTS }
   | ">" { GTS }
@@ -89,6 +95,7 @@ rule read =
   | ":" { COLON }
   | "(" { LPAREN }
   | ")" { RPAREN }
+  | "|" { PIPE }
   (* Types *)
   | "int" { TINT }
   | "top" { TTOP }
@@ -99,6 +106,8 @@ rule read =
   | label { LABEL (Lexing.lexeme lexbuf) }
   | id { TVAR (Lexing.lexeme lexbuf) }
   | stack_type_var { STVAR (Lexing.lexeme lexbuf) }
+  | location_con { LOCVAR (Lexing.lexeme lexbuf) }
+  | cap_con { CAPVAR (Lexing.lexeme lexbuf) }
   | comment { COMMENT (Lexing.lexeme lexbuf) }
   | sl_comment { SINGLE_LINE_COMMENT (Lexing.lexeme lexbuf) }
   | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
