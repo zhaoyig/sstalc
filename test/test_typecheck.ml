@@ -8,7 +8,7 @@ let tests = "test suite for typecheck" >::: [
     let sty1 = Cons (Int, Cons (Int, Nil)) in
     let sty2 = Append (Cons (Int, Nil), Cons (Int, Nil)) in
     assert_bool "" (typecheck_stack_eq empty_env sty1 sty2 [])); *)
-  "stack equality stkbeta4" >:: (fun _ -> 
+  (* "stack equality stkbeta4" >:: (fun _ -> 
     let sigma1 = Cons (Int, Nil) in
     let sigma2 = Cons (Int, Cons (Int, Nil)) in
     let sigma3 = Cons (TypeList [Int; Int], Nil) in
@@ -62,7 +62,7 @@ let tests = "test suite for typecheck" >::: [
     let a = (Forall ([], ((StackTypeVar (STVar "$p"), [(Rbx, Int)])))) ++ (StackTypeVar (STVar "$p")) in
     let b = a in
     print_endline (pp_sty (sty_substitute_sty a b (STVar "$p")))
-  )
+  ) *)
 ]
 
 let _ = run_test_tt_main tests

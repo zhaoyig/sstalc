@@ -15,20 +15,17 @@ let immediate = '$' '-'? digit+
 (* Labels start with _ *)
 let label = '_' ['a'-'z' 'A'-'Z' '0'-'9']+
 
-(* Stack type variables start with ! *)
-let stack_type_var = '$' id_chars+
-
 (* Comment start with ; *)
 let comment = ';' [^'\n']+
 
 (* Single line comment start with # *)
 let sl_comment = '#' [^'\n']+
 
-(* location constructor *)
-let location_con = '!' id_chars+
-
-(* capability constructor *)
-let cap_con = '^' id_chars+
+let ty_var = id_chars
+let aty_var = '!' id_chars
+let cap_var = '`' id_chars
+let acap_var = '~' id_chars
+let loc_var = '*' id_chars
 
 rule read =
   parse
@@ -70,20 +67,17 @@ rule read =
   | "unpack" { UNPACK }
   | "Forall" { FORALL }
   | "Exist" { EXIST }
-  | "WordPack" { WORD_PACK }
+  (* | "WordPack" { WORD_PACK } *)
   | "OperandPack" { OPERAND_PACK}
   | "makestack" { MAKESTACK }
   | "sfree" { SFREE }
   | "salloc" { SALLOC }
-  | "sst" { SST }
-  | "sld" { SLD }
   | "as" { AS }
   | "code" { CODE }
   | "nil" { NIL }
   | "::" { CONS }
   | "@" { APPEND }
   | "PTR" { TPTR }
-  | "sp" { SP }
   | "<" { LTS }
   | ">" { GTS }
   | "[" { LSB }
@@ -104,10 +98,11 @@ rule read =
   (* | "\n" { NEWLINE } *)
   (* id, int, eof *)
   | label { LABEL (Lexing.lexeme lexbuf) }
-  | id { TVAR (Lexing.lexeme lexbuf) }
-  | stack_type_var { STVAR (Lexing.lexeme lexbuf) }
-  | location_con { LOCVAR (Lexing.lexeme lexbuf) }
-  | cap_con { CAPVAR (Lexing.lexeme lexbuf) }
+  | ty_var { TYVAR (Lexing.lexeme lexbuf) }
+  | aty_var { ATYVAR (Lexing.lexeme lexbuf) }
+  | loc_var { LOCVAR (Lexing.lexeme lexbuf) }
+  | cap_var { CAPVAR (Lexing.lexeme lexbuf) }
+  | acap_var { ACAPVAR (Lexing.lexeme lexbuf) }
   | comment { COMMENT (Lexing.lexeme lexbuf) }
   | sl_comment { SINGLE_LINE_COMMENT (Lexing.lexeme lexbuf) }
   | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
@@ -115,4 +110,5 @@ rule read =
     int_of_string (String.sub i 1 (String.length i - 1))) }
   | eof { EOF }
   | _ as c { failwith (Printf.sprintf "unexpected character: %C" c) }
+
   

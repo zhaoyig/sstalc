@@ -25,7 +25,7 @@ let formatInstruction instruction operands =
 let rec compileWordVal = function
   | Label s -> s
   | Immediate i -> string_of_int i
-  | Ptr -> failwith "encountered word pointer" (* TODO *)
+  | Ptr _ -> failwith "encountered runtime location pointer" (* TODO *)
   | Ns -> "0"
   | WordIns (w, _) -> compileWordVal w
 
@@ -75,8 +75,7 @@ let compileInstruction = function
       formatInstruction "cmp" [compileReg reg; "0"];
       formatInstruction (compileBop bop) [compileOperand operand];
     ]
-  | Malloc tyList ->
-    let len = List.length tyList in 
+  | Malloc (_, len) ->
     let bytesToAlloc = len * 8 in [
       formatInstruction "mov" ["rdi"; string_of_int bytesToAlloc];
       formatInstruction "call" ["_malloc"];

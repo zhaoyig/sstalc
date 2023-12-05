@@ -15,20 +15,21 @@ type cap_var = CapVar of name
 type loc_var = LocVar of name
 type ty_var = TyVar of name
 type aty_var = ATyVar of name
-type alloc_var = AllocVar of name
+type acap_var = ACapVar of name
 
 and con_var =
   | CVLoc of loc_var
   | CVCap of cap_var
   | CVTy of ty_var
   | CVATy of aty_var
-  | CVAlloc of alloc_var
+  | CVACap of acap_var
 
 and con =
   | ConLoc of location
   | ConCap of access_cap
   | ConTy of ty
   | ConATy of aty
+  | ConACap of alloc_cap
 
 (* TODO: Runtime location needed here? *)
 
@@ -39,9 +40,9 @@ and location =
 
 and predicate = 
   | PStacktop
-  | Pstackbase
-  | Ptuplestart
-  | Ptupleend
+  | PStackbase
+  | PTuplestart
+  | PTupleend
   
 and access_cap = 
   | CapCon of cap_var (* ε *)
@@ -52,11 +53,11 @@ and access_cap =
   | CapWedge of access_cap * access_cap
   | CapFrac of access_cap * access_cap
 
-and alloc_cap = alloc_cap_item list
-
-and alloc_cap_item =
-  | AllocCon of alloc_var
-  | AllocPred of location * predicate
+and alloc_cap =
+  | ACapCon of acap_var
+  | ACapNil
+  | ACap of location * predicate
+  | ACapCons of alloc_cap * alloc_cap
 
 and ty = 
   | TyCon of ty_var (* Type Variable *)
@@ -89,6 +90,7 @@ and label_asgn = (name * ty) list
 
 type rewrite = 
   | Drop
+  | Dup
   | Comm
   | Assoc
   | Distr1
@@ -98,11 +100,7 @@ type rewrite =
   | Split
   | Join
 
-and pos_ind = pos_ind_item list
-
-and pos_ind_item =
-  | Pos1
-  | Pos2
+and pos_ind = int list
 
 and witness_item = rewrite * pos_ind
 
@@ -128,15 +126,19 @@ and code_block =
 and word_val = 
   | Label of name (* #d *)
   | Immediate of int
-  | WordIns of word_val * con list
-  | Ptr
+  | WordIns of word_val * con
+  | Ptr of runtime_location
   | Ns
   (* pack? *)
 
 and operand =
   | Reg of reg
   | Word of word_val
-  | OperandIns of operand * con list  
+  | OperandIns of operand * con  
+
+and runtime_location =
+  | RuntimeB
+  | RuntimeNext of runtime_location
 
 (* Instructions *)
 
@@ -159,8 +161,8 @@ and instruction =
   | Ld of reg * reg * int
   | St of reg * reg * int
   | Bop of bop * reg * operand
-  | Malloc of (ty) list
-  | Pack of con list * access_cap * alloc_cap * reg
+  | Malloc of loc_var * int
+  | Pack of con list * access_cap * alloc_cap * reg * con_var list
   | Unpack of ty_asgn * reg
   | Salloc of int
   | Sfree of int

@@ -1,0 +1,22 @@
+_entry:
+    code[$p]{ sp: {sp : $p, rbx : int} :: $p }.
+        mov rax, _entry[$p]
+        salloc 1
+        sst sp(0), rax
+        jmp _body[{sp : $p, rbx : int} :: $p]
+_body:
+    code[$p]{ sp: {sp : $p, rbx : int} :: $p }.
+        sld rdx, sp(0)
+        sfree 1
+        jmp rdx
+_halt:
+    code[]{ sp: nil, rbx: int}.
+        mov rdi, rbx
+        halt int
+_main:
+    code[]{ sp: nil }.
+        salloc 1
+        mov rax, _halt
+        sst sp(0), rax
+# push _halt
+        jmp _entry[nil]
