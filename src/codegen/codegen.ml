@@ -1,5 +1,4 @@
-open SstalParser.Main
-open SstalParser.Ast
+open Ast
 
 let compileReg = function
   | Eax -> "eax"
@@ -154,17 +153,13 @@ let rec compileCodeBlockSeq = function
   | CodeBlockSeqCons (code_block, code_block_seq) -> 
       compileCodeBlock code_block @ compileCodeBlockSeq code_block_seq
 
-let compileFile inputFilename outputFilename = 
-  let ins_seq_seq = parseFile inputFilename in
+let compile_ast ast : string =
   let compiledInstructions = String.concat "\n"
-    (compileCodeBlockSeq ins_seq_seq) in
+    (compileCodeBlockSeq ast) in
   let header = String.concat "\n" [
     "global  _main";
     "section  .text";
     "extern _malloc"
   ]  ^ "\n" in
   let compiledResult = header ^ compiledInstructions in
-  let oc = open_out (outputFilename) in
-  Printf.fprintf oc "%s\n" compiledResult;
-  close_out oc
-  
+  compiledResult

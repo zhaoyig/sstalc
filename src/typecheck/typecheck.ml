@@ -1,5 +1,5 @@
 open SstalParser.Main
-open SstalParser.Ast
+open Ast
 open Prettyprint
 open Utils
 exception TypeError of string

@@ -1,5 +1,6 @@
 (library
- (name sstalParser))
+ (name sstalParser)
+ (libraries ast))
 
 (menhir
  (modules parser))

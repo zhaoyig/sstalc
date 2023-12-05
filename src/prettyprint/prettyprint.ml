@@ -1,5 +1,5 @@
 open Codegen
-open SstalParser.Ast
+open Ast
 
 let pp_reg = function
   | Eax -> "eax"

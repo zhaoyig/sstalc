@@ -1,5 +1,5 @@
 open OUnit2
-open SstalParser.Ast
+open Ast
 open Typecheck
 open Prettyprint
 
