@@ -1,5 +1,5 @@
-open TalParser.Main
-open TalParser.Tal
+open SstalParser.Main
+open SstalParser.Ast
 open Prettyprint
 open Utils
 exception TypeError of string

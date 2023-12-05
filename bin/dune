@@ -1,5 +1,5 @@
 (executable
- (public_name stalc)
+ (public_name sstalc)
  (name main)
- (libraries codegen talParser typecheck)
+ (libraries codegen sstalParser typecheck)
  (modes byte exe))

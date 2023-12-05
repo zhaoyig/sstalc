@@ -1,5 +1,5 @@
 open OUnit2
-open TalParser.Tal
+open SstalParser.Ast
 open Typecheck
 open Prettyprint
 

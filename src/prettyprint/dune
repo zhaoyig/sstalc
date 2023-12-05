@@ -1,3 +1,3 @@
 (library
  (name prettyprint)
- (libraries talParser codegen))
+ (libraries sstalParser codegen))

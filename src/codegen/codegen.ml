@@ -1,5 +1,5 @@
-open TalParser.Main
-open TalParser.Tal
+open SstalParser.Main
+open SstalParser.Ast
 
 let compileReg = function
   | Eax -> "eax"

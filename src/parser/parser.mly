@@ -1,5 +1,5 @@
 %{
-open Tal
+open Ast
 open Stdlib
 %}
 // %token NEWLINE
@@ -55,8 +55,8 @@ open Stdlib
 %token SLD
 
 (* Types *)
-%token <Tal.name> TVAR (* Type variable *)
-%token <Tal.name> STVAR (* Stack type variable *)
+%token <Ast.name> TVAR (* Type variable *)
+%token <Ast.name> STVAR (* Stack type variable *)
 %token TINT (* Type Int *)
 %token FORALL 
 %token EXIST
@@ -87,7 +87,7 @@ open Stdlib
 
 %left APPEND
 %right CONS
-%start <Tal.code_block_seq> prog
+%start <Ast.code_block_seq> prog
 %%
 
 prog:
